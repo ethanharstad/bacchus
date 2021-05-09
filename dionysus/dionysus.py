@@ -21,6 +21,7 @@ bot = commands.Bot(command_prefix="?", intents=intents)
 # Messages we are tracking for responses
 msg_refs = {}
 
+NUMERIC_REACTIONS = ["1\N{COMBINING ENCLOSING KEYCAP}", "2\N{COMBINING ENCLOSING KEYCAP}", "3\N{COMBINING ENCLOSING KEYCAP}", "4\N{COMBINING ENCLOSING KEYCAP}", "5\N{COMBINING ENCLOSING KEYCAP}", "6\N{COMBINING ENCLOSING KEYCAP}", "7\N{COMBINING ENCLOSING KEYCAP}", "8\N{COMBINING ENCLOSING KEYCAP}", "9\N{COMBINING ENCLOSING KEYCAP}", "0\N{COMBINING ENCLOSING KEYCAP}"]
 
 @bot.event
 async def on_ready():
@@ -121,10 +122,10 @@ async def on_games_reaction(reaction: discord.Reaction, user: discord.User, **kw
     except StopIteration:
         logging.info("Emojii {reaction.emoji} is not mapped to a game!".format(reaction=reaction))
 
-COH_GAMES = {}
+CAH_GAMES = {}
 
 @games.command()
-async def coh(ctx, user: discord.User = None):
+async def cah(ctx, user: discord.User = None):
     user = user or ctx.author
     if not ctx.guild:
         await ctx.send(
@@ -135,7 +136,7 @@ async def coh(ctx, user: discord.User = None):
         return False
 
     game = cards_against_humanity.CardsAgainstHumanity()
-    COH_GAMES[game.key] = game
+    CAH_GAMES[game.key] = game
 
     embed = discord.Embed(
         title="Cards Against Humanity",
@@ -148,15 +149,15 @@ async def coh(ctx, user: discord.User = None):
         )
     )
     embed.add_field(name="👍", value="to join", inline=True)
-    embed.add_field(name="✔️", value="to start", inline=True)
+    embed.add_field(name="✅", value="to start", inline=True)
 
     msg = await ctx.send(embed=embed)
     await msg.add_reaction("👍")
-    await msg.add_reaction("✔️")
+    await msg.add_reaction("✅")
 
     msg_refs[msg.id] = {
         "msg": msg,
-        "callback": coh_prestart,
+        "callback": cah_prestart,
         "ctx": ctx,
         "game": game.key
     }
@@ -164,12 +165,12 @@ async def coh(ctx, user: discord.User = None):
     return True
 
 
-async def coh_prestart(reaction: discord.Reaction, user: discord.User, **kwargs):
+async def cah_prestart(reaction: discord.Reaction, user: discord.User, **kwargs):
     # Lookup the game
     game_key = kwargs['game']
-    if game_key not in COH_GAMES:
+    if game_key not in CAH_GAMES:
         return False
-    game = COH_GAMES[game_key]
+    game = CAH_GAMES[game_key]
 
     # Debugging tools
     if reaction.emoji == "🃏":
@@ -182,13 +183,21 @@ async def coh_prestart(reaction: discord.Reaction, user: discord.User, **kwargs)
                 description="React to selection the best answer(s) for:\n> {}".format(question),
                 color=0x00FFFF,
             )
-            for card in player.hand:
+            for index, card in enumerate(player.hand):
                 hand.add_field(
-                    name="X",
+                    name=NUMERIC_REACTIONS[index],
                     value=str(card),
                     inline=False
                 )
-            await user.send(embed=hand)
+            hand.add_field(
+                name="❌",
+                value="Leave the game",
+                inline=False
+            )
+            msg = await user.send(embed=hand)
+            for i in range(len(player.hand)):
+                await msg.add_reaction(emoji=NUMERIC_REACTIONS[i])
+            await msg.add_reaction(emoji="❌")
         return False
 
     # Try to join the game
@@ -201,7 +210,7 @@ async def coh_prestart(reaction: discord.Reaction, user: discord.User, **kwargs)
         return False
 
     # Try to start the game
-    if reaction.emoji == "✔️":
+    if reaction.emoji == "✅":
         # The game requires you to be a member in order to start it
         if user.id not in game.players:
             await user.send("You cannot start the Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention} because you haven't joined it.".format(game=game, reaction=reaction))
@@ -229,10 +238,10 @@ async def coh_prestart(reaction: discord.Reaction, user: discord.User, **kwargs)
 games_fields = [
     {
         "emoji": "🙊",
-        "slug": "coh",
+        "slug": "cah",
         "name": "Cards Against Humanity",
         "description": "Fill in the blank using politically incorrect words or phrases.",
-        "callback": coh,
+        "callback": cah,
     },
 ]
 

@@ -1,4 +1,5 @@
 import random
+import re
 import logging
 import json
 
@@ -92,7 +93,7 @@ class Player:
     def __repr__(self):
         return "Player({0.id}, {0.name})".format(self)
 
-
+p = re.compile(r"\b_\b")
 for path in GAME_DATA_PATHS:
     with open(path, "r") as f:
         data = json.load(f)
@@ -101,19 +102,22 @@ for path in GAME_DATA_PATHS:
             ANSWERS.append(a)
             logging.info("Loaded: {}".format(a))
         for i, d in enumerate(data["black"]):
-            q = QuestionCard(i, d["text"], d["pick"])
+            text = p.sub("\_\_\_\_\_", d["text"])
+            q = QuestionCard(i, text, d["pick"])
             QUESTIONS.append(q)
             logging.info("Loaded: {}".format(q))
 
 
 class CardsAgainstHumanity:
     key: str
+    cards_per_hand: int
     questions: set
     answers: set
     players: dict
 
-    def __init__(self):
+    def __init__(self, cards_per_hand=8):
         self.key = petname.Generate(2, "-")
+        self.cards_per_hand = cards_per_hand
         self.questions = set()
         self.answers = set()
         self.players = dict()
@@ -149,6 +153,6 @@ class CardsAgainstHumanity:
     def start_round(self):
         question = self.draw_question()
         for player in self.players.values():
-            while len(player.hand) < 5:
+            while len(player.hand) < self.cards_per_hand:
                 player.hand.add(self.draw_answer())
         return question
