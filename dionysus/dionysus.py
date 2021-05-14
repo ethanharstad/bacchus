@@ -4,9 +4,8 @@ import os
 import dice
 import discord
 from discord.ext import commands
-import petname
 
-from games import cards_against_humanity
+from dionysus.games.cah.game import CardsAgainstHumanity, Player
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -21,7 +20,19 @@ bot = commands.Bot(command_prefix="?", intents=intents)
 # Messages we are tracking for responses
 msg_refs = {}
 
-NUMERIC_REACTIONS = ["1\N{COMBINING ENCLOSING KEYCAP}", "2\N{COMBINING ENCLOSING KEYCAP}", "3\N{COMBINING ENCLOSING KEYCAP}", "4\N{COMBINING ENCLOSING KEYCAP}", "5\N{COMBINING ENCLOSING KEYCAP}", "6\N{COMBINING ENCLOSING KEYCAP}", "7\N{COMBINING ENCLOSING KEYCAP}", "8\N{COMBINING ENCLOSING KEYCAP}", "9\N{COMBINING ENCLOSING KEYCAP}", "0\N{COMBINING ENCLOSING KEYCAP}"]
+NUMERIC_REACTIONS = [
+    "1\N{COMBINING ENCLOSING KEYCAP}",
+    "2\N{COMBINING ENCLOSING KEYCAP}",
+    "3\N{COMBINING ENCLOSING KEYCAP}",
+    "4\N{COMBINING ENCLOSING KEYCAP}",
+    "5\N{COMBINING ENCLOSING KEYCAP}",
+    "6\N{COMBINING ENCLOSING KEYCAP}",
+    "7\N{COMBINING ENCLOSING KEYCAP}",
+    "8\N{COMBINING ENCLOSING KEYCAP}",
+    "9\N{COMBINING ENCLOSING KEYCAP}",
+    "0\N{COMBINING ENCLOSING KEYCAP}",
+]
+
 
 @bot.event
 async def on_ready():
@@ -118,11 +129,15 @@ async def on_games_reaction(reaction: discord.Reaction, user: discord.User, **kw
     logging.info("Handling reaction")
     try:
         game = next(g for g in games_fields if g["emoji"] == reaction.emoji)
-        return await game["callback"](kwargs['ctx'])
+        return await game["callback"](kwargs["ctx"])
     except StopIteration:
-        logging.info("Emojii {reaction.emoji} is not mapped to a game!".format(reaction=reaction))
+        logging.info(
+            "Emojii {reaction.emoji} is not mapped to a game!".format(reaction=reaction)
+        )
+
 
 CAH_GAMES = {}
+
 
 @games.command()
 async def cah(ctx, user: discord.User = None):
@@ -135,7 +150,7 @@ async def cah(ctx, user: discord.User = None):
         )
         return False
 
-    game = cards_against_humanity.CardsAgainstHumanity()
+    game = CardsAgainstHumanity()
     CAH_GAMES[game.key] = game
 
     embed = discord.Embed(
@@ -159,7 +174,7 @@ async def cah(ctx, user: discord.User = None):
         "msg": msg,
         "callback": cah_prestart,
         "ctx": ctx,
-        "game": game.key
+        "game": game.key,
     }
 
     return True
@@ -167,7 +182,7 @@ async def cah(ctx, user: discord.User = None):
 
 async def cah_prestart(reaction: discord.Reaction, user: discord.User, **kwargs):
     # Lookup the game
-    game_key = kwargs['game']
+    game_key = kwargs["game"]
     if game_key not in CAH_GAMES:
         return False
     game = CAH_GAMES[game_key]
@@ -180,20 +195,16 @@ async def cah_prestart(reaction: discord.Reaction, user: discord.User, **kwargs)
             user = bot.get_user(player_id)
             hand = discord.Embed(
                 title="Cards Against Humanity",
-                description="React to selection the best answer(s) for:\n> {}".format(question),
+                description="React to selection the best answer(s) for:\n> {}".format(
+                    question
+                ),
                 color=0x00FFFF,
             )
             for index, card in enumerate(player.hand):
                 hand.add_field(
-                    name=NUMERIC_REACTIONS[index],
-                    value=str(card),
-                    inline=False
+                    name=NUMERIC_REACTIONS[index], value=str(card), inline=False
                 )
-            hand.add_field(
-                name="❌",
-                value="Leave the game",
-                inline=False
-            )
+            hand.add_field(name="❌", value="Leave the game", inline=False)
             msg = await user.send(embed=hand)
             for i in range(len(player.hand)):
                 await msg.add_reaction(emoji=NUMERIC_REACTIONS[i])
@@ -202,8 +213,12 @@ async def cah_prestart(reaction: discord.Reaction, user: discord.User, **kwargs)
 
     # Try to join the game
     if reaction.emoji == "👍":
-        if game.add_player(cards_against_humanity.Player(user.id, user.display_name)):
-            await user.send("Thanks for joining Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention}.\nIt will start shortly.".format(game=game, reaction=reaction))
+        if game.add_player(Player(user.id, user.display_name)):
+            await user.send(
+                "Thanks for joining Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention}.\nIt will start shortly.".format(
+                    game=game, reaction=reaction
+                )
+            )
         else:
             # TODO should probably tell the user something here
             await reaction.remove(user)
@@ -213,15 +228,23 @@ async def cah_prestart(reaction: discord.Reaction, user: discord.User, **kwargs)
     if reaction.emoji == "✅":
         # The game requires you to be a member in order to start it
         if user.id not in game.players:
-            await user.send("You cannot start the Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention} because you haven't joined it.".format(game=game, reaction=reaction))
+            await user.send(
+                "You cannot start the Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention} because you haven't joined it.".format(
+                    game=game, reaction=reaction
+                )
+            )
             await reaction.remove(user)
             return False
         # The game requires at least 3 players
         if len(game.players) < 3:
-            await user.send("You cannot start the Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention} because it doesn't have enough players yet.".format(game=game, reaction=reaction))
+            await user.send(
+                "You cannot start the Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention} because it doesn't have enough players yet.".format(
+                    game=game, reaction=reaction
+                )
+            )
             await reaction.remove(user)
             return False
-        
+
         # Start the game!
         embed = discord.Embed(
             title="Cards Against Humanity",
