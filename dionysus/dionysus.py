@@ -5,7 +5,7 @@ import dice
 import discord
 from discord.ext import commands
 
-from dionysus.games.cah.game import CardsAgainstHumanity, Player
+from games.cah.game import CardsAgainstHumanity, Player
 
 logging.basicConfig(level=logging.DEBUG)
 
