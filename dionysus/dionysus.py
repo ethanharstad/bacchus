@@ -1,11 +1,12 @@
 import logging
 import os
+import random
 
 import dice
 import discord
 from discord.ext import commands
 
-from games.cah.game import CardsAgainstHumanity, Player
+from games.cah.game import CardsAgainstHumanity, Player, ANSWERS, QUESTIONS
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -139,46 +140,62 @@ async def on_games_reaction(reaction: discord.Reaction, user: discord.User, **kw
 CAH_GAMES = {}
 
 
-@games.command()
-async def cah(ctx, user: discord.User = None):
-    user = user or ctx.author
-    if not ctx.guild:
-        await ctx.send(
-            "Sorry {user.display_name}, you can only play this game inside a server.".format(
-                user=user
+@games.group()
+async def cah(ctx):
+# async def cah(ctx, user: discord.User = None):
+    if ctx.invoked_subcommand is None:
+        # user = user or ctx.author
+        user = ctx.author
+        if not ctx.guild:
+            await ctx.send(
+                "Sorry {user.display_name}, you can only play this game inside a server.".format(
+                    user=user
+                )
+            )
+            return False
+
+        game = CardsAgainstHumanity()
+        CAH_GAMES[game.key] = game
+
+        embed = discord.Embed(
+            title="Cards Against Humanity",
+            description="Fill in the blank using politically incorrect words or phrases.",
+            color=0x00FFFF,
+        )
+        embed.set_footer(
+            text="Game {game.key} created by {user.display_name}".format(
+                user=user, game=game
             )
         )
-        return False
+        embed.add_field(name="👍", value="to join", inline=True)
+        embed.add_field(name="✅", value="to start", inline=True)
 
-    game = CardsAgainstHumanity()
-    CAH_GAMES[game.key] = game
+        msg = await ctx.send(embed=embed)
+        await msg.add_reaction("👍")
+        await msg.add_reaction("✅")
 
+        msg_refs[msg.id] = {
+            "msg": msg,
+            "callback": cah_prestart,
+            "ctx": ctx,
+            "game": game.key,
+        }
+
+        return True
+
+@cah.command()
+async def deal(ctx):
+    hand = random.choices(ANSWERS, k=8)
+    question = random.choice(QUESTIONS)
     embed = discord.Embed(
         title="Cards Against Humanity",
-        description="Fill in the blank using politically incorrect words or phrases.",
-        color=0x00FFFF,
+        description="Chose the best answer for\n\n> {}".format(question),
+        color=0xff0000
     )
-    embed.set_footer(
-        text="Game {game.key} created by {user.display_name}".format(
-            user=user, game=game
-        )
-    )
-    embed.add_field(name="👍", value="to join", inline=True)
-    embed.add_field(name="✅", value="to start", inline=True)
-
-    msg = await ctx.send(embed=embed)
-    await msg.add_reaction("👍")
-    await msg.add_reaction("✅")
-
-    msg_refs[msg.id] = {
-        "msg": msg,
-        "callback": cah_prestart,
-        "ctx": ctx,
-        "game": game.key,
-    }
-
-    return True
-
+    for i, answer in enumerate(hand):
+        embed.add_field(name=i, value=str(answer), inline=False)
+    
+    await ctx.send(embed=embed)
 
 async def cah_prestart(reaction: discord.Reaction, user: discord.User, **kwargs):
     # Lookup the game
@@ -195,7 +212,7 @@ async def cah_prestart(reaction: discord.Reaction, user: discord.User, **kwargs)
             user = bot.get_user(player_id)
             hand = discord.Embed(
                 title="Cards Against Humanity",
-                description="React to selection the best answer(s) for:\n> {}".format(
+                description="React to select the best answer(s) for:\n> {}".format(
                     question
                 ),
                 color=0x00FFFF,
