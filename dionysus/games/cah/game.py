@@ -55,12 +55,13 @@ class CardsAgainstHumanity:
         self.cards_per_hand: int = cards_per_hand
         self.questions: set = set()
         self.answers: set = set()
-        self.players: set = dict()
+        self.players: dict = dict()
         self.play_order: list = []
         self.round: int = 0
         self.judge_index: int = -1
         self.question: QuestionCard = None
         self.state: GameState = GameState.INIT
+        self.submissions: dict = {}
 
     def add_player(self, player: Player):
         # Don't add players that already exist
@@ -80,6 +81,7 @@ class CardsAgainstHumanity:
             self.play_order.append(player.id)
         
         logging.info("Players: {}".format(self.players))
+        logging.info("Play Order: {}".format(self.play_order))
         return True
 
     def remove_player(self, player: Player):
@@ -102,27 +104,45 @@ class CardsAgainstHumanity:
     def draw_answer(self):
         a = CardsAgainstHumanity._draw(ANSWERS, self.answers)
         self.answers.add(a)
-        logging.info("Drew: {}".format(a))
+        logging.info("Drew Answer: {}".format(a))
         return a
 
     def draw_question(self):
         q = CardsAgainstHumanity._draw(QUESTIONS, self.questions)
         self.questions.add(q)
-        logging.info("Drew: {}".format(q))
+        logging.info("Drew Question: {}".format(q))
         return q
 
     def start_round(self):
         self.round += 1
         self.question = self.draw_question()
-        
-        self.state = GameState.WAITING_FOR_ANSWERS
+        self.submissions = {}
         for player in self.players.values():
             while len(player.hand) < self.cards_per_hand:
                 player.hand.add(self.draw_answer())
+        
+        self.state = GameState.WAITING_FOR_ANSWERS
         return self.question
     
-    def submit_answer(self, player: Player, answer: AnswerCard):
-        pass
+    def submit_answer(self, player: Player, answer: list):
+        # Can't submit if you aren't a player
+        if player.id not in self.players:
+            return False
+        # Can't submit if you're the judge
+        if player.id == self.play_order[self.judge_index]:
+            return False
+        # Must submit the correct number of answers
+        if len(answer) != self.question.pick:
+            return False
+        # Add the submission, keyed by player id
+        self.submissions[player.id] = answer
+        # See if submissions are complete
+        if len(self.submissions) >= (len(self.players) - 1):
+            self.state = GameState.WAITING_FOR_JUDGE
+        
+        logging.info('Submissions: {}'.format(self.submissions))
+        logging.info('State: {}'.format(self.state))
+        return True
 
     def choose_winner(self, answer: AnswerCard):
         pass
