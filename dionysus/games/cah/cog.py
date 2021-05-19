@@ -7,15 +7,18 @@ from .game import CardsAgainstHumanity, Player, ANSWERS, QUESTIONS
 
 logging.basicConfig(level=logging.DEBUG)
 
-CAH_GAMES = {}
-
 
 class CardsAgainstHumanityCog(commands.Cog):
     def __init__(self, bot):
         super().__init__()
-        self.bot = bot
+        # A reference to the bot client
+        self.bot = bot 
+        # Games keyed by game id
+        self.games = {}
+        # Games keyed by player id
+        self.players = {}
 
-    def cah_build_hand_embed(self, game: CardsAgainstHumanity, player_id: int):
+    def _build_hand_embed(self, game: CardsAgainstHumanity, player_id: int):
         player: Player = game.players[player_id]
 
         embed = discord.Embed(
@@ -24,13 +27,13 @@ class CardsAgainstHumanityCog(commands.Cog):
             color=0x00FFFF,
         )
 
-        for i, answer in player.hand:
+        for i, answer in enumerate(player.hand):
             embed.add_field(name="{}".format(i + 1), value=str(answer), inline=False)
 
         return embed
 
 
-    def cah_build_judge_embed(self, game: CardsAgainstHumanity):
+    def _build_judge_embed(self, game: CardsAgainstHumanity):
         embed = discord.Embed(
             title="Cards Against Humanity",
             description="Choose the best answer to:\n{}".format(game.question),
@@ -58,7 +61,11 @@ class CardsAgainstHumanityCog(commands.Cog):
                 return False
 
             game = CardsAgainstHumanity()
-            CAH_GAMES[game.key] = game
+            self.games[game.key] = {
+                'guild': ctx.guild,
+                'channel': ctx.channel,
+                'game': game,
+            }
 
             embed = discord.Embed(
                 title="Cards Against Humanity",
@@ -70,20 +77,10 @@ class CardsAgainstHumanityCog(commands.Cog):
                     user=user, game=game
                 )
             )
-            embed.add_field(name="👍", value="to join", inline=True)
-            embed.add_field(name="✅", value="to start", inline=True)
+            embed.add_field(name="{prefix}cah join {key}".format(prefix=self.bot.command_prefix, key=game.key), value="to join", inline=True)
+            embed.add_field(name="{prefix}cah start {key}".format(prefix=self.bot.command_prefix, key=game.key), value="to start", inline=True)
 
-            msg = await ctx.send(embed=embed)
-            await msg.add_reaction("👍")
-            await msg.add_reaction("✅")
-
-            msg_refs[msg.id] = {
-                "msg": msg,
-                "callback": cah_prestart,
-                "ctx": ctx,
-                "game": game.key,
-            }
-
+            await ctx.send(embed=embed)
             return True
 
 
@@ -101,80 +98,66 @@ class CardsAgainstHumanityCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-
-    async def cah_prestart(self, reaction: discord.Reaction, user: discord.User, **kwargs):
-        # Lookup the game
-        game_key = kwargs["game"]
-        if game_key not in CAH_GAMES:
-            return False
-        game = CAH_GAMES[game_key]
-
-        # Debugging tools
-        if reaction.emoji == "🃏":
-            question = game.start_round()
-            for player_id in game.players:
-                player = game.players[player_id]
-                user = self.bot.get_user(player_id)
-                hand = discord.Embed(
-                    title="Cards Against Humanity",
-                    description="React to select the best answer(s) for:\n> {}".format(
-                        question
-                    ),
-                    color=0x00FFFF,
-                )
-                for index, card in enumerate(player.hand):
-                    hand.add_field(
-                        name=NUMERIC_REACTIONS[index], value=str(card), inline=False
-                    )
-                hand.add_field(name="❌", value="Leave the game", inline=False)
-                msg = await user.send(embed=hand)
-                for i in range(len(player.hand)):
-                    await msg.add_reaction(emoji=NUMERIC_REACTIONS[i])
-                await msg.add_reaction(emoji="❌")
-            return False
-
-        # Try to join the game
-        if reaction.emoji == "👍":
-            if game.add_player(Player(user.id, user.display_name)):
-                await user.send(
-                    "Thanks for joining Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention}.\nIt will start shortly.".format(
-                        game=game, reaction=reaction
+    @cah.command()
+    async def join(self, ctx, key: str):
+        if key not in self.games:
+            pass
+        ref = self.games[key]
+        game = ref['game']
+        user = ctx.author
+        if game.add_player(Player(user.id, user.display_name)):
+            await user.send(
+                    "Thanks for joining Cards Against Humanity game {game.key} in {guild.name} {channel.mention}.\nIt will start shortly.".format(
+                        game=game, guild=ref['guild'], channel=ref['channel']
                     )
                 )
-            else:
-                # TODO should probably tell the user something here
-                await reaction.remove(user)
-            return False
+        else:
+            pass
 
-        # Try to start the game
-        if reaction.emoji == "✅":
-            # The game requires you to be a member in order to start it
-            if user.id not in game.players:
-                await user.send(
-                    "You cannot start the Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention} because you haven't joined it.".format(
-                        game=game, reaction=reaction
-                    )
+    @cah.command()
+    async def start(self, ctx, key: str):
+        if key not in self.games:
+            pass
+        ref = self.games[key]
+        game = ref['game']
+        user = ctx.author
+        # The game requires you to be a member in order to start it
+        if user.id not in game.players:
+            await user.send(
+                "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because you haven't joined it.".format(
+                    game=game, guild=ref['guild'], channel=ref['channel']
                 )
-                await reaction.remove(user)
-                return False
-            # The game requires at least 3 players
-            if len(game.players) < 3:
-                await user.send(
-                    "You cannot start the Cards Against Humanity game {game.key} in {reaction.message.guild.name} {reaction.message.channel.mention} because it doesn't have enough players yet.".format(
-                        game=game, reaction=reaction
-                    )
-                )
-                await reaction.remove(user)
-                return False
-
-            # Start the game!
-            embed = discord.Embed(
-                title="Cards Against Humanity",
-                description="Started by {user.display_name}!",
-                color=0x00FFFF,
             )
-            embed.set_footer(
-                text="Cards Against Humanity game {game.key}".format(game=game)
+            return False
+        # The game requires at least 3 players
+        if len(game.players) < 3:
+            await user.send(
+                "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because it doesn't have enough players yet.".format(
+                    game=game, guild=ref['guild'], channel=ref['channel']
+                )
             )
-            await reaction.message.channel.send(embed=embed)
-            return True
+            return False
+        
+        # Start the game!
+        embed = discord.Embed(
+            title="Cards Against Humanity",
+            description="Started by {user.display_name}!",
+            color=0x00FFFF,
+        )
+        embed.set_footer(
+            text="Cards Against Humanity game {game.key}".format(game=game)
+        )
+        await ref['channel'].send(embed=embed)
+        return True
+    
+    @cah.command()
+    async def debug(self, ctx, key: str):
+        if key not in self.games:
+            pass
+        ref = self.games[key]
+        game = ref['game']
+        game.start_round()
+        for player_id in game.players:
+            user = self.bot.get_user(player_id)
+            hand = self._build_hand_embed(game, player_id)
+            msg = await user.send(embed=hand)
