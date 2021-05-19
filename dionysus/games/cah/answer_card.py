@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 class AnswerCard:
     id: int
     text: str
@@ -19,3 +23,6 @@ class AnswerCard:
 
     def __repr__(self):
         return 'AnswerCard({0.id}, "{0.text}")'.format(self)
+    
+    def render(self):
+        return f"**{self.text.rstrip('.')}**"

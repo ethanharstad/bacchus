@@ -5,7 +5,7 @@ from discord.ext import commands
 
 from .game import CardsAgainstHumanity, Player, ANSWERS, QUESTIONS
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class CardsAgainstHumanityCog(commands.Cog):
@@ -181,7 +181,8 @@ class CardsAgainstHumanityCog(commands.Cog):
             a = player.hand[j - 1]
             answer.append(a)
 
-        logging.info('Submit: {}'.format(answer))
+        logger.info('Submit: {}'.format(answer))
+        logger.info('Submit: {}'.format(game.question.fill_in(answer)))
         game.submit_answer(player, answer)
     
     @cah.command()

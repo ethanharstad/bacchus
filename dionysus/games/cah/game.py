@@ -13,7 +13,8 @@ from .answer_card import AnswerCard
 from .question_card import QuestionCard
 from .player import Player
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+print(logger.getEffectiveLevel())
 
 GAME_DATA_PATHS = [
     "data/games/cah/cah-cards-compact.json",
@@ -25,18 +26,18 @@ ANSWERS = []
 
 p = re.compile(r"\b_\b")
 for path in GAME_DATA_PATHS:
-    logging.info("Processing game data file: {}".format(path))
+    logger.info("Processing game data file: {}".format(path))
     with open(path, "r") as f:
         data = json.load(f)
         for i, d in enumerate(data["white"]):
             a = AnswerCard(i, d)
             ANSWERS.append(a)
-            logging.info("Loaded: {}".format(a))
+            logger.info("Loaded: {}".format(a))
         for i, d in enumerate(data["black"]):
-            text = p.sub(r"\_\_\_\_\_", d["text"])
+            text = p.sub("{}", d["text"])
             q = QuestionCard(i, text, d["pick"])
             QUESTIONS.append(q)
-            logging.info("Loaded: {}".format(q))
+            logger.info("Loaded: {}".format(q))
 
 
 class GameState(IntEnum):
@@ -80,8 +81,8 @@ class CardsAgainstHumanity:
             # If the game has already started, add to the end
             self.play_order.append(player.id)
         
-        logging.info("Players: {}".format(self.players))
-        logging.info("Play Order: {}".format(self.play_order))
+        logger.info("Players: {}".format(self.players))
+        logger.info("Play Order: {}".format(self.play_order))
         return True
 
     def remove_player(self, player: Player):
@@ -104,13 +105,13 @@ class CardsAgainstHumanity:
     def draw_answer(self):
         a = CardsAgainstHumanity._draw(ANSWERS, self.answers)
         self.answers.add(a)
-        logging.info("Drew Answer: {}".format(a))
+        logger.info("Drew Answer: {}".format(a))
         return a
 
     def draw_question(self):
         q = CardsAgainstHumanity._draw(QUESTIONS, self.questions)
         self.questions.add(q)
-        logging.info("Drew Question: {}".format(q))
+        logger.info("Drew Question: {}".format(q))
         return q
 
     def start_round(self):
@@ -140,8 +141,8 @@ class CardsAgainstHumanity:
         if len(self.submissions) >= (len(self.players) - 1):
             self.state = GameState.WAITING_FOR_JUDGE
         
-        logging.info('Submissions: {}'.format(self.submissions))
-        logging.info('State: {}'.format(self.state))
+        logger.info('Submissions: {}'.format(self.submissions))
+        logger.info('State: {}'.format(self.state))
         return True
 
     def choose_winner(self, answer: AnswerCard):

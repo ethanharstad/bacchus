@@ -1,4 +1,9 @@
 import logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(name)s %(levelname)s:%(message)s",
+)
+
 import os
 import random
 
@@ -10,7 +15,7 @@ from games.cah.cog import CardsAgainstHumanityCog
 
 COMMAND_PREFIX = "?"
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 intents = discord.Intents(
     guilds=True,
@@ -39,12 +44,12 @@ NUMERIC_REACTIONS = [
 
 @bot.event
 async def on_ready():
-    print("We have logged in as {0.user}".format(bot))
+    logger.info("We have logged in as {0.user}".format(bot))
 
 
 @bot.event
 async def on_reaction_add(reaction, user):
-    logging.info(
+    logger.info(
         "on_reaction_add msg:{reaction.message.id} user:{user.id}".format(
             reaction=reaction, user=user
         )
@@ -55,7 +60,7 @@ async def on_reaction_add(reaction, user):
 
     # Ignore messages we aren't tracking
     if reaction.message.id not in msg_refs:
-        logging.info(
+        logger.info(
             "Could not process reaction to msg id {}".format(reaction.message.id)
         )
         return
@@ -70,18 +75,18 @@ async def on_reaction_add(reaction, user):
 
 @bot.command()
 async def ping(ctx):
-    logging.info("got ping")
+    logger.info("got ping")
     await ctx.send("pong")
 
 
 @bot.command()
 async def roll(ctx, fmt: str = "1d6"):
-    logging.info("Got dice command {fmt}".format(fmt=fmt))
+    logger.info("Got dice command {fmt}".format(fmt=fmt))
     try:
         roll = dice.roll(fmt)
     except dice.DiceBaseException as e:
         await ctx.send(e.pretty_print())
-        logging.error("Dice Error", exc_info=e)
+        logger.error("Dice Error", exc_info=e)
         return
 
     if len(roll) > 1:
@@ -92,6 +97,7 @@ async def roll(ctx, fmt: str = "1d6"):
         msg = "🎲 Rolled {roll} 🎲".format(roll=roll[0])
 
     await ctx.send(msg)
+
 
 bot.add_cog(CardsAgainstHumanityCog(bot))
 
