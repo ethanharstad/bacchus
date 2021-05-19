@@ -2,13 +2,13 @@ class Player:
     id: int
     name: str
     score: int
-    hand: set
+    hand: list
 
     def __init__(self, id, name="Anonymous"):
         self.id = id
         self.name = name
         self.score = 0
-        self.hand = set()
+        self.hand = []
     
     def __eq__(self, other):
         if (isinstance(other, Player)):

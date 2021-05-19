@@ -119,7 +119,7 @@ class CardsAgainstHumanity:
         self.submissions = {}
         for player in self.players.values():
             while len(player.hand) < self.cards_per_hand:
-                player.hand.add(self.draw_answer())
+                player.hand.append(self.draw_answer())
         
         self.state = GameState.WAITING_FOR_ANSWERS
         return self.question

@@ -102,10 +102,14 @@ class CardsAgainstHumanityCog(commands.Cog):
     async def join(self, ctx, key: str):
         if key not in self.games:
             pass
+        user = ctx.author
+        if user.id in self.players:
+            pass
         ref = self.games[key]
         game = ref['game']
-        user = ctx.author
+
         if game.add_player(Player(user.id, user.display_name)):
+            self.players[user.id] = game.key
             await user.send(
                     "Thanks for joining Cards Against Humanity game {game.key} in {guild.name} {channel.mention}.\nIt will start shortly.".format(
                         game=game, guild=ref['guild'], channel=ref['channel']
@@ -115,12 +119,17 @@ class CardsAgainstHumanityCog(commands.Cog):
             pass
 
     @cah.command()
-    async def start(self, ctx, key: str):
+    async def start(self, ctx):
+        user = ctx.author
+        if user.id not in self.players:
+            pass
+
+        key = self.players[user.id]
         if key not in self.games:
             pass
         ref = self.games[key]
         game = ref['game']
-        user = ctx.author
+        
         # The game requires you to be a member in order to start it
         if user.id not in game.players:
             await user.send(
@@ -149,13 +158,44 @@ class CardsAgainstHumanityCog(commands.Cog):
         )
         await ref['channel'].send(embed=embed)
         return True
-    
+
     @cah.command()
-    async def debug(self, ctx, key: str):
+    async def submit(self, ctx, *args):
+        user = ctx.author
+        if user.id not in self.players:
+            pass
+
+        key = self.players[user.id]
         if key not in self.games:
             pass
         ref = self.games[key]
         game = ref['game']
+
+        if user.id not in game.players:
+            pass
+        player = game.players[user.id]
+        
+        answer = []
+        for i in args:
+            j = int(i)
+            a = player.hand[j - 1]
+            answer.append(a)
+
+        logging.info('Submit: {}'.format(answer))
+        game.submit_answer(player, answer)
+    
+    @cah.command()
+    async def debug(self, ctx):
+        user = ctx.author
+        if user.id not in self.players:
+            pass
+
+        key = self.players[user.id]
+        if key not in self.games:
+            pass
+        ref = self.games[key]
+        game = ref['game']
+
         game.start_round()
         for player_id in game.players:
             user = self.bot.get_user(player_id)
