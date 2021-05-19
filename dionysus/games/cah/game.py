@@ -3,7 +3,7 @@ import re
 import logging
 import json
 from enum import IntEnum
-from typing import Iterable
+from typing import Iterable, Dict, Set, List
 
 from discord.activity import Game
 
@@ -16,6 +16,7 @@ from .player import Player
 logger = logging.getLogger(__name__)
 print(logger.getEffectiveLevel())
 
+NUM_JUDGES = 1
 GAME_DATA_PATHS = [
     "data/games/cah/cah-cards-compact.json",
 ]
@@ -32,12 +33,15 @@ for path in GAME_DATA_PATHS:
         for i, d in enumerate(data["white"]):
             a = AnswerCard(i, d)
             ANSWERS.append(a)
-            logger.info("Loaded: {}".format(a))
+            logger.debug("Loaded Answer: {}".format(a))
+        logger.info(f"Loaded {i+1} answers")
         for i, d in enumerate(data["black"]):
             text = p.sub("{}", d["text"])
             q = QuestionCard(i, text, d["pick"])
             QUESTIONS.append(q)
-            logger.info("Loaded: {}".format(q))
+            logger.debug("Loaded Question: {}".format(q))
+        logger.info(f"Loaded {i+1} questions")
+    logger.info("Done processing game data files")
 
 
 class GameState(IntEnum):
@@ -47,52 +51,60 @@ class GameState(IntEnum):
     ROUND_COMPLETE = 3
     GAME_OVER = 4
 
+
 # TODO speed mode
 # TODO Rando Cardrissian
 class CardsAgainstHumanity:
-
     def __init__(self, cards_per_hand=8):
         self.key: str = petname.Generate(2, "-")
         self.cards_per_hand: int = cards_per_hand
-        self.questions: set = set()
-        self.answers: set = set()
-        self.players: dict = dict()
-        self.play_order: list = []
+        self.questions: Set[QuestionCard] = set()
+        self.answers: Set[AnswerCard] = set()
+        self.players: Dict[int, Player] = dict()
+        self.play_order: List[int] = []
         self.round: int = 0
         self.judge_index: int = -1
         self.question: QuestionCard = None
         self.state: GameState = GameState.INIT
-        self.submissions: dict = {}
+        self.submissions: Dict[int, List[AnswerCard]] = {}
 
     def add_player(self, player: Player):
+        logger.info(
+            f"Player {player.id}:{player.name} is attempting to join game {self.key}"
+        )
         # Don't add players that already exist
         if player.id in self.players:
-            return False
+            return
         # Add the player to the list of players
         self.players[player.id] = player
         # Add the player to the play order
         if self.round == 0:
             # If the game hasn't started yet, play order is randomized
             self.play_order.insert(
-                random.randrange(len(self.play_order) + 1),
-                player.id
+                random.randrange(len(self.play_order) + 1), player.id
             )
         else:
             # If the game has already started, add to the end
             self.play_order.append(player.id)
-        
+
+        logger.info(f"Player {player.id}:{player.name} joined game {self.key}")
         logger.info("Players: {}".format(self.players))
         logger.info("Play Order: {}".format(self.play_order))
         return True
 
     def remove_player(self, player: Player):
+        logger.info(f"Attempting to remove player {player.id}:{player.name}")
         # Can't remove a player that doesn't exist
         if player.id not in self.player:
+            logger.warning(f"Player {player.id}:{player.name} does not exist")
             return False
         # Remove the player from the play order
         self.play_order.remove(player.id)
         # Remove the player from the list of players
         self.players.pop(player.id)
+        logger.info(f"Removed player {player.id}:{player.name}")
+        logger.info("Players: {}".format(self.players))
+        logger.info("Play Order: {}".format(self.play_order))
         return True
 
     @staticmethod
@@ -116,34 +128,67 @@ class CardsAgainstHumanity:
 
     def start_round(self):
         self.round += 1
+        logger.info(f"Starting round {self.round}")
+        logger.info(f"Player {self.play_order[self.judge_index]} is judge")
+        # Draw the question
         self.question = self.draw_question()
+        # Reset submissions
         self.submissions = {}
-        for player in self.players.values():
-            while len(player.hand) < self.cards_per_hand:
-                player.hand.append(self.draw_answer())
-        
+        # Fill player hands
+        self._fill_hands()
+
         self.state = GameState.WAITING_FOR_ANSWERS
         return self.question
-    
-    def submit_answer(self, player: Player, answer: list):
+
+    def _fill_hands(self):
+        for player in self.players.values():
+            logger.info(f"Filling player {player.id}:{player.name} hand")
+            while len(player.hand) < self.cards_per_hand:
+                player.hand.append(self.draw_answer())
+
+    def submit_answer(self, player: Player, answers: list):
+        logger.info(f"Player {player.id}:{player.name} attempting to submit {answers}")
         # Can't submit if you aren't a player
         if player.id not in self.players:
-            return False
+            raise ValueError("Player is not a member of the game.")
+        # Can't submit if not in submission stage
+        if self.state != GameState.WAITING_FOR_ANSWERS:
+            raise ValueError("You cannot submit answers right now.")
         # Can't submit if you're the judge
-        if player.id == self.play_order[self.judge_index]:
-            return False
+        # if player.id == self.play_order[self.judge_index]:
+        #     raise ValueError("The judge cannot submit answers.")
         # Must submit the correct number of answers
-        if len(answer) != self.question.pick:
-            return False
+        if len(answers) != self.question.pick:
+            raise ValueError(
+                f"Player submitted {len(answers)} answers and the question requires {self.question.pick}."
+            )
         # Add the submission, keyed by player id
-        self.submissions[player.id] = answer
+        self.submissions[player.id] = answers
+        logger.info("Submitted.")
+        logger.info("Submissions: {}".format(self.submissions))
+        logger.info("State: {}".format(GameState(self.state)))
+
         # See if submissions are complete
-        if len(self.submissions) >= (len(self.players) - 1):
-            self.state = GameState.WAITING_FOR_JUDGE
-        
-        logger.info('Submissions: {}'.format(self.submissions))
-        logger.info('State: {}'.format(self.state))
+        if self._check_answers():
+            # Close out submissions
+            self.finalize_answers()
+
         return True
+
+    def _check_answers(self):
+        remaining_players = (len(self.players) - NUM_JUDGES) - len(self.submissions)
+        logger.info(f"Still waiting on {remaining_players} players.")
+        return remaining_players <= 0
+
+    def finalize_answers(self):
+        # Remove submitted cards from players' hands
+        for player_id, answer in self.submissions.items():
+            # Player might not be real if random submission enabled
+            if player_id in self.players:
+                for card in answer:
+                    self.players[player_id].hand.remove(card)
+        self.state = GameState.WAITING_FOR_JUDGE
+        logger.info(f"Answers finalized for round {self.round}.")
 
     def choose_winner(self, answer: AnswerCard):
         pass
