@@ -2,3 +2,4 @@ dice~=3.1.2
 discord.py~=1.7.1
 petname~=2.6
 emoji~=1.2.0
+PyCards~=2.1.1
