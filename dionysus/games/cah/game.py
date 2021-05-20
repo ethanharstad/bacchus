@@ -14,9 +14,8 @@ from .question_card import QuestionCard
 from .player import Player
 
 logger = logging.getLogger(__name__)
-print(logger.getEffectiveLevel())
 
-NUM_JUDGES = 1
+NUM_JUDGES = 0
 GAME_DATA_PATHS = [
     "data/games/cah/cah-cards-compact.json",
 ]
@@ -67,6 +66,8 @@ class CardsAgainstHumanity:
         self.question: QuestionCard = None
         self.state: GameState = GameState.INIT
         self.submissions: Dict[int, List[AnswerCard]] = {}
+        self.submission_mapping: List[int] = []
+        self.winner: Player = None
 
     def add_player(self, player: Player):
         logger.info(
@@ -114,6 +115,12 @@ class CardsAgainstHumanity:
             if x not in values:
                 return x
 
+    def get_judge_id(self):
+        return self.play_order[self.judge_index]
+
+    def get_winner_id(self):
+        return self.winner.id
+
     def draw_answer(self):
         a = CardsAgainstHumanity._draw(ANSWERS, self.answers)
         self.answers.add(a)
@@ -129,11 +136,12 @@ class CardsAgainstHumanity:
     def start_round(self):
         self.round += 1
         logger.info(f"Starting round {self.round}")
-        logger.info(f"Player {self.play_order[self.judge_index]} is judge")
+        logger.info(f"Player {self.get_judge_id} is judge")
         # Draw the question
         self.question = self.draw_question()
         # Reset submissions
         self.submissions = {}
+        self.winner = None
         # Fill player hands
         self._fill_hands()
 
@@ -165,7 +173,7 @@ class CardsAgainstHumanity:
         # Add the submission, keyed by player id
         self.submissions[player.id] = answers
         logger.info("Submitted.")
-        logger.info("Submissions: {}".format(self.submissions))
+        logger.info("submissions: {}".format(self.submissions))
         logger.info("State: {}".format(GameState(self.state)))
 
         # See if submissions are complete
@@ -187,8 +195,26 @@ class CardsAgainstHumanity:
             if player_id in self.players:
                 for card in answer:
                     self.players[player_id].hand.remove(card)
+        self.submission_mapping = list(self.submissions.keys())
+        random.shuffle(self.submission_mapping)
         self.state = GameState.WAITING_FOR_JUDGE
         logger.info(f"Answers finalized for round {self.round}.")
 
-    def choose_winner(self, answer: AnswerCard):
-        pass
+    def choose_winner(self, submission_id: int):
+        if self.state != GameState.WAITING_FOR_JUDGE:
+            raise ValueError("The game is not ready for judging.")
+
+        winner_id = self.submission_mapping[submission_id]
+        self.winner = self.players[winner_id]
+        self.winner.score += 1
+
+        self._finalize_round()
+        return winner_id
+
+    def _finalize_round(self):
+        if self.state != GameState.WAITING_FOR_JUDGE:
+            raise ValueError("The game is not ready for finalizing.")
+
+        self.submission_mapping = []
+        self.judge_index = (self.judge_index + 1) % len(self.play_order)
+        self.state = GameState.ROUND_COMPLETE

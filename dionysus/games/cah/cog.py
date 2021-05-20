@@ -1,9 +1,11 @@
 import logging
+from os import name
 import random
 import discord
+from discord import embeds
 from discord.ext import commands
 
-from .game import CardsAgainstHumanity, Player, ANSWERS, QUESTIONS
+from .game import CardsAgainstHumanity, GameState, Player, ANSWERS, QUESTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +25,7 @@ class CardsAgainstHumanityCog(commands.Cog):
 
         embed = discord.Embed(
             title="Cards Against Humanity",
-            description="Choose your best answer to:\n> {question}\nSubmit your answer with `{prefix}cah submit [ids]`".format(
-                question=game.question, prefix=self.bot.command_prefix
-            ),
+            description=f"Choose your best answer to:\n> {game.question}\nSubmit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`",
             color=0x00FFFF,
         )
 
@@ -37,15 +37,45 @@ class CardsAgainstHumanityCog(commands.Cog):
     def _build_judge_embed(self, game: CardsAgainstHumanity):
         embed = discord.Embed(
             title="Cards Against Humanity",
-            description="Choose the best answer to:\n{}".format(game.question),
-            color=0x00FFF,
+            description=f"Choose the best answer to:\n{game.question}\nSelect the winner with `{self.bot.command_prefix}cah choose [id]`",
+            color=0x00FFFF,
         )
-
-        for i, answer in enumerate(random.shuffle(game.submissions.values())):
+        for i, submission_id in enumerate(game.submission_mapping):
+            answer = game.submissions[submission_id]
             embed.add_field(
-                name="{}".format(i + 1), value=", ".join(answer), inline=False
+                name=f"{i + 1}", value=game.question.fill_in(answer), inline=False
             )
 
+        return embed
+
+    def _build_winner_embed(self, game: CardsAgainstHumanity):
+        winner = game.get_winner_id()
+        submissions = sorted(game.submissions, key=lambda x: game.players[x].name)
+        embed = discord.Embed(
+            title="Cards Against Humanity",
+            description=f"{game.players[winner].name} is the winner!",
+            color=0x00FFFF,
+        )
+        for player_id in submissions:
+            embed.add_field(
+                name=game.players[player_id].name,
+                value=game.question.fill_in(game.submissions[player_id]),
+                inline=False,
+            )
+        return embed
+
+    def _build_score_embed(self, game: CardsAgainstHumanity):
+        ranks = sorted(game.players, key=lambda id: game.players[id].score)
+        score_list = []
+        for id in ranks:
+            player = game.players[id]
+            score_list.append(f"{player.name} - {player.score}")
+        scores = "\n".join(score_list)
+        embed = discord.Embed(
+            title="Cards Against Humanity",
+            description=f"Scores after {game.round} rounds:\n{scores}",
+            color=0x00FFFF,
+        )
         return embed
 
     @commands.group()
@@ -196,8 +226,40 @@ class CardsAgainstHumanityCog(commands.Cog):
 
         logger.info("Submit: {}".format(answers))
         logger.info("Submit: {}".format(game.question.fill_in(answers)))
-        if game.submit_answer(player, answers):
-            await user.send("You played:\n> {}".format(game.question.fill_in(answers)))
+        if not game.submit_answer(player, answers):
+            # handle submit failure
+            return
+        await user.send("You played:\n> {}".format(game.question.fill_in(answers)))
+
+        # Check if the game is ready to judge
+        if game.state == GameState.WAITING_FOR_JUDGE:
+            await self._judging(game)
+
+    async def _judging(self, game):
+        embed = self._build_judge_embed(game)
+        judge = self.bot.get_user(game.get_judge_id())
+        await judge.send(embed=embed)
+
+    @cah.command()
+    async def choose(self, ctx, answer_id: int):
+        user = ctx.author
+        if user.id not in self.players:
+            return
+
+        key = self.players[user.id]
+        if key not in self.games:
+            return
+        ref = self.games[key]
+        game = ref["game"]
+
+        if user.id is not game.get_judge_id():
+            return
+
+        game.choose_winner(answer_id - 1)
+        if game.state == GameState.ROUND_COMPLETE:
+            channel = ref["channel"]
+            await channel.send(embed=self._build_winner_embed(game))
+            await channel.send(embed=self._build_score_embed(game))
 
     @cah.command()
     async def debug(self, ctx):
