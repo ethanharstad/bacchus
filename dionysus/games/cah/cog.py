@@ -2,8 +2,8 @@ import logging
 from os import name
 import random
 import discord
-from discord import embeds
 from discord.ext import commands
+import emoji
 
 from .game import CardsAgainstHumanity, GameState, Player, ANSWERS, QUESTIONS
 
@@ -56,7 +56,15 @@ class CardsAgainstHumanityCog(commands.Cog):
             description=f"{game.players[winner].name} is the winner!",
             color=0x00FFFF,
         )
+        embed.add_field(
+            name=emoji.emojize(f":star: {game.players[winner].name} :star:"),
+            value=game.question.fill_in(game.submissions[winner]),
+            inline=False,
+        )
         for player_id in submissions:
+            # Skip the winner
+            if player_id == winner:
+                continue
             embed.add_field(
                 name=game.players[player_id].name,
                 value=game.question.fill_in(game.submissions[player_id]),
