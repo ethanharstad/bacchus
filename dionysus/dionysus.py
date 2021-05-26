@@ -6,25 +6,29 @@ logging.basicConfig(
 )
 
 import os
-import random
 
 import dice
 import discord
 from discord.ext import commands
+import emoji
 
 from games.cah.cog import CardsAgainstHumanityCog
+from games.ridethebus.cog import RideTheBusCog
 
 COMMAND_PREFIX = "?"
 
 logger = logging.getLogger(__name__)
 
+activity = discord.Game(
+    name=emoji.emojize(":partying_face: Party Games :party_popper:")
+)
 intents = discord.Intents(
     guilds=True,
     members=True,
     messages=True,
     reactions=True,
 )
-bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
+bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents, activity=activity)
 
 # Messages we are tracking for responses
 msg_refs = {}
@@ -101,5 +105,6 @@ async def roll(ctx, fmt: str = "1d6"):
 
 
 bot.add_cog(CardsAgainstHumanityCog(bot))
+bot.add_cog(RideTheBusCog(bot))
 
 bot.run(os.environ["DISCORD_TOKEN"])

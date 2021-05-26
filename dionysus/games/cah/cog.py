@@ -1,5 +1,4 @@
 import logging
-from os import name
 import random
 import discord
 from discord.ext import commands
@@ -11,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class CardsAgainstHumanityCog(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         super().__init__()
         # A reference to the bot client
         self.bot = bot
