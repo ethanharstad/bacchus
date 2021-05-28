@@ -27,63 +27,36 @@ random.seed()
 giphy_api = giphy_client.DefaultApi()
 giphy_key = os.environ['GIPHY_API_KEY']
 
+# Set discord status
 activity = discord.Game(
     name=emoji.emojize(":partying_face: Party Games :party_popper:")
 )
+# Set discord permissions
 intents = discord.Intents(
     guilds=True,
     members=True,
     messages=True,
     reactions=True,
 )
+# Configure discord bot
 bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents, activity=activity)
 
-# Messages we are tracking for responses
-msg_refs = {}
 
-NUMERIC_REACTIONS = [
-    "1\N{COMBINING ENCLOSING KEYCAP}",
-    "2\N{COMBINING ENCLOSING KEYCAP}",
-    "3\N{COMBINING ENCLOSING KEYCAP}",
-    "4\N{COMBINING ENCLOSING KEYCAP}",
-    "5\N{COMBINING ENCLOSING KEYCAP}",
-    "6\N{COMBINING ENCLOSING KEYCAP}",
-    "7\N{COMBINING ENCLOSING KEYCAP}",
-    "8\N{COMBINING ENCLOSING KEYCAP}",
-    "9\N{COMBINING ENCLOSING KEYCAP}",
-    "0\N{COMBINING ENCLOSING KEYCAP}",
-]
-
+#################
+#
+# Event Listeners
+#
+#################
 
 @bot.event
 async def on_ready():
     logger.info("We have logged in as {0.user}".format(bot))
-
-
+    
 @bot.event
-async def on_reaction_add(reaction, user):
-    logger.info(
-        "on_reaction_add msg:{reaction.message.id} user:{user.id}".format(
-            reaction=reaction, user=user
-        )
-    )
-    # Ignore reactions by the bot
-    if user.bot:
-        return
-
-    # Ignore messages we aren't tracking
-    if reaction.message.id not in msg_refs:
-        logger.info(
-            "Could not process reaction to msg id {}".format(reaction.message.id)
-        )
-        return
-
-    # Attempt to handle the reaction
-    val = await msg_refs[reaction.message.id]["callback"](
-        reaction, user, **msg_refs[reaction.message.id]
-    )
-    if val:
-        msg_refs.pop(reaction.message.id)
+async def on_message(message):
+    if bot.user.mentioned_in(message):
+        if 'fuck' in message.content:
+            await message.reply("Fuck you too!")
 
 
 @bot.command()
