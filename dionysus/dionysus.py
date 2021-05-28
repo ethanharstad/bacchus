@@ -42,12 +42,6 @@ intents = discord.Intents(
 bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents, activity=activity)
 
 
-#################
-#
-# Event Listeners
-#
-#################
-
 @bot.event
 async def on_ready():
     logger.info("We have logged in as {0.user}".format(bot))
@@ -57,6 +51,7 @@ async def on_message(message):
     if bot.user.mentioned_in(message):
         if 'fuck' in message.content:
             await message.reply("Fuck you too!")
+    await bot.process_commands(message)
 
 
 @bot.command()
