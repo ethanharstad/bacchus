@@ -48,9 +48,11 @@ async def on_ready():
     
 @bot.event
 async def on_message(message):
+    # See if the bot was mentioned
     if bot.user.mentioned_in(message):
         if 'fuck' in message.content:
             await message.reply("Fuck you too!")
+    # See if any commands were in this message
     await bot.process_commands(message)
 
 
@@ -105,6 +107,11 @@ def _parse_question(words):
         question = "Nothing like a noob!"
     return question
 
+async def _delete_message(msg: discord.Message):
+    # If this isn't a private message, delete the original message
+    if msg.channel.type == discord.ChannelType.text:
+        await msg.delete()
+
 # Define a new command on the bot
 # This is a decorator, probably a ways from actually learning these, for now know it's copied from the discord library documentation
 @bot.command(name="8ball")
@@ -118,8 +125,9 @@ async def eight_ball(ctx: commands.Context, *args):
     response = EIGHT_BALL_RESPONSES[i]
     # Reformat the question
     question = _parse_question(args)
-    if ctx.channel.type == discord.ChannelType.text:
-        await ctx.message.delete()
+    # Try to delete the message
+    await _delete_message(ctx.message)
+    # Build the embed
     embed = discord.Embed(
         color=0xff0000,
         title="Magic Eight Ball",
@@ -141,13 +149,19 @@ GIFBALL_SEARCH_TERMS = [
 
 @bot.command()
 async def gifball(ctx: commands.Context, *args):
+    # Pick a random offset to get a random gif
     seed = random.randrange(100)
+    # Pick a search term at random
     i = random.randrange(len(GIFBALL_SEARCH_TERMS))
     search = GIFBALL_SEARCH_TERMS[i]
+    # Format the question that they asked
     question = _parse_question(args)
     try:
+        # Search giphy
         response = giphy_api.gifs_search_get(giphy_key, search, limit=1, offset=seed)
+        # Extract the URL for an image
         url = response.data[0].images.downsized_medium.url
+        # Build the embed
         embed = discord.Embed(
             color=0xff0000,
             title="Magic Eight Ball",
@@ -155,10 +169,12 @@ async def gifball(ctx: commands.Context, *args):
         )
         embed.set_thumbnail(url='http://d3s95l9oyr3kl.cloudfront.net/Magic_eight_ball.png')
         embed.set_image(url=url)
-        if ctx.channel.type == discord.ChannelType.text:
-            await ctx.message.delete()
+        # Try to delete the message I LOVE YOU!!!!!!!!!!!!!!!<-------
+        await _delete_message(ctx.message)
+        # Send the response
         await ctx.send(embed=embed)
     except:
+        # Something went wrong
         logger.exception("OOPS")
         await ctx.send(f"Fuck you {ctx.author.display_name}, Leave me alone. I'm broken...")
 
