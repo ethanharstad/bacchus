@@ -7,6 +7,7 @@ import petname
 import pydealer
 
 from .player import Player
+from .result import Result
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class GameState(IntEnum):
     HIGHER_OR_LOWER = 20
     INSIDE_OR_OUTSIDE = 30
     SUIT = 40
+    COMPLETE = 100
 
 
 class RideTheBus:
@@ -44,11 +46,81 @@ class RideTheBus:
         # init game
         self.state = GameState.RED_OR_BLACK
 
-    def guess(self, player_id: str):
+    def guess(self, player_id: str, guess: str):
         if player_id != self.current_player.id:
             raise ValueError(
                 f"Guessing player ({player_id}) is not the current player ({self.current_player.id})"
             )
+        player = self.current_player
+        # Do things....
+        # Draw card
+        while True:
+            card = self._deck.deal(1)[0]
+            if self._validate_draw(player, card):
+                break
+            self._deck.add(card)
+            self._deck.shuffle()
+        self.current_player.cards.append(card)
+        result = self._score_round(player, guess)
+        
+        # Move on
+        self._index += 1
+        if self._index >= len(self.players):
+            self._next_round()
+        
+        return Result(player, result)
+    
+    def _validate_draw(self, player: Player, card: pydealer.Card):
+        if self.state is GameState.HIGHER_OR_LOWER:
+            return card.value != player.cards[-1].value
+        elif self.state is GameState.INSIDE_OR_OUTSIDE:
+            return card.value not in [player.cards[-1].value, player.cards[-1].value]
+        return True
+
+    def _score_round(self, player: Player, guess: str) -> bool:
+        logger.info(f"{player.id} guessed {guess} for {player.cards}")
+        dealt = player.cards[-1]
+        if self.state is GameState.RED_OR_BLACK:
+            if dealt.suit in ['Clubs', 'Spades']:
+                color = 'black'
+            else:
+                color = 'red'
+            return guess == color
+        elif self.state is GameState.HIGHER_OR_LOWER:
+            prev = player.cards[-2]
+            higher = dealt > prev
+            guess = guess == "higher"
+            return (higher and guess) or (not higher and not guess)
+        elif self.state is GameState.INSIDE_OR_OUTSIDE:
+            bounds = player.cards[:-1]
+            if bounds[1] < bounds[0]:
+                bounds.reverse()
+            logger.info(f"Checking {bounds[0]} < {dealt} < {bounds[1]}")
+            inside = bounds[0] < dealt < bounds[1]
+            guess = guess == "inside"
+            return (inside and guess) or (not inside and not guess)
+        elif self.state is GameState.SUIT:
+            return dealt.suit.lower() == guess
+        return None
+    
+    def _next_round(self):
+        self._index = 0
+        if self.state == GameState.RED_OR_BLACK:
+            self.state = GameState.HIGHER_OR_LOWER
+            return
+        if self.state == GameState.HIGHER_OR_LOWER:
+            self.state = GameState.INSIDE_OR_OUTSIDE
+            return
+        if self.state == GameState.INSIDE_OR_OUTSIDE:
+            self.state = GameState.SUIT
+            return
+        if self.state == GameState.SUIT:
+            self.state = GameState.COMPLETE
+            return
+
+    @property
+    def player_list(self) -> List[Player]:
+        return [self.players[id] for id in self.play_order]
 
     @property
     def current_player(self) -> Player:

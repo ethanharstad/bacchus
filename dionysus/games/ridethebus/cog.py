@@ -1,20 +1,49 @@
 import logging
-from typing import Dict
+from typing import Dict, List, Iterable
 
 import discord
 from discord.ext import commands
+import emoji
 
 from .game import RideTheBus, GameState
+from .result import Result
+from utils import playingcards
 
 logger = logging.getLogger(__name__)
 
 COLOR = 0xFFFF00
 
 ROUND_MESSAGES = {
-    GameState.RED_OR_BLACK: "",
-    GameState.HIGHER_OR_LOWER: "",
-    GameState.INSIDE_OR_OUTSIDE: "",
-    GameState.SUIT: "",
+    GameState.RED_OR_BLACK: {
+        "prompt": emoji.emojize(":red_square: Red or :black_large_square: Black?"),
+        "reactions": {
+            emoji.emojize(":red_square:"): "red",
+            emoji.emojize(":black_large_square:"): "black",
+        },
+    },
+    GameState.HIGHER_OR_LOWER: {
+        "prompt": emoji.emojize(":arrow_up: Higher or :arrow_down: Lower?"),
+        "reactions": {
+            "⬆️": "higher",
+            "⬇️": "lower",
+        },
+    },
+    GameState.INSIDE_OR_OUTSIDE: {
+        "prompt": emoji.emojize(":thumbsup: Inside or :thumbsdown: Outside?"),
+        "reactions": {
+            "👍": "inside",
+            "👎": "outside",
+        },
+    },
+    GameState.SUIT: {
+        "prompt": emoji.emojize(":clubs: Club, :diamonds: Diamond, :hearts: Heart, or :spades: Spade?"),
+        "reactions": {
+            "♣️": "clubs",
+            "♦️": "diamonds",
+            "♥️": "hearts",
+            "♠️": "spades",
+        },
+    },
 }
 
 
@@ -25,7 +54,58 @@ class RideTheBusCog(commands.Cog):
         self.keys: Dict[str, RideTheBus] = {}
         self.channels: Dict[discord.abc.Messageable, RideTheBus] = {}
         self.players: Dict[discord.User, RideTheBus] = {}
+        self.context: Dict[str, discord.Context] = {}
+        self.msg_refs: Dict[discord.Message, RideTheBus] = {}
 
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
+        # Ignore reactions from the bot
+        if user.bot:
+            return
+        # Try to get the game this reaction is for
+        try:
+            game = self.msg_refs[reaction.message]
+        except:
+            logger.warning(f"Failed to get game for {reaction} by {user}")
+            return
+        # Validate the reaction
+        if not self._validate_reaction(game, reaction, user):
+            # Remove the invalid reaction
+            await reaction.message.remove_reaction(reaction, user)
+            return
+        logger.info(f"Processing {reaction} by {user} in {game.key}")
+        result = game.guess(user.id, ROUND_MESSAGES[game.state]["reactions"][reaction.emoji])
+        embed = self._build_result(game, result)
+        ctx = self.context[game.key]
+        await ctx.send(embed=embed)
+        
+        self.msg_refs.pop(reaction.message)
+        await self._handle_state(game)
+    
+    def _build_result(self, game: RideTheBus, result: Result):
+        user = self.bot.get_user(result.player.id)
+        card = result.player.cards[-1]
+        result = "WON" if result.successful else "LOST"
+        embed = discord.Embed(color=COLOR, title="Ride The Bus", description=f"Drew {card} and {result}")
+        embed.set_author(name=user.display_name, icon_url=user.avatar_url)
+        embed.set_image(url=playingcards.get_card_image_url(card))
+        return embed
+    
+    def _validate_reaction(self, game: RideTheBus, reaction: discord.Reaction, user: discord.User):
+        if user.id is not game.current_player.id:
+            return False
+        try:
+            if reaction.emoji not in ROUND_MESSAGES[game.state]['reactions']:
+                return False
+        except:
+            return False
+        return True
+    
+    async def _handle_state(self, game: RideTheBus):
+        if game.state in [GameState.INIT, GameState.COMPLETE]:
+            return
+        await self._send_prompt(game)
+    
     @commands.group()
     async def bus(self, ctx: commands.Context):
         if ctx.invoked_subcommand is not None:
@@ -48,6 +128,7 @@ class RideTheBusCog(commands.Cog):
         game = RideTheBus()
         self.channels[ctx.channel] = game
         self.keys[game.key] = game
+        self.context[game.key] = ctx
         embed = discord.Embed(
             color=COLOR,
             title="Ride The Bus",
@@ -87,7 +168,40 @@ class RideTheBusCog(commands.Cog):
     async def start(self, ctx: commands.Context):
         if ctx.author not in self.players:
             await ctx.reply(f"Sorry, you're not in any games you can start...")
+        game = self.players[ctx.author]
+        game.start()
+        embed = self._build_round_start(game)
+        await ctx.send(embed=embed)
+        await self._send_prompt(game)
 
     def _build_round_start(self, game: RideTheBus):
-        embed = discord.Embed(color=COLOR, title="Ride The Bus", description=f"")
+        player_list = self._build_player_list(game)
+        embed = discord.Embed(color=COLOR, title="Ride The Bus",
+            description=f"Players:\n{player_list}"
+        )
         return embed
+    
+    async def _send_prompt(self, game: RideTheBus):
+        ctx = self.context[game.key]
+        user = self.bot.get_user(game.current_player.id)
+        embed = self._build_prompt(game, user)
+        msg = await ctx.send(embed=embed)
+        await self._add_reactions(msg, ROUND_MESSAGES[game.state]['reactions'].keys())
+        self.msg_refs[msg] = game
+        
+    
+    def _build_prompt(self, game: RideTheBus, user: discord.User):
+        prompt = ROUND_MESSAGES[game.state]['prompt']
+        embed = discord.Embed(color=COLOR, title="Ride The Bus", description=prompt)
+        embed.set_author(name=user.display_name, icon_url=user.avatar_url)
+        return embed
+    
+    def _build_player_list(self, game: RideTheBus):
+        s = ""
+        for i, player in enumerate(game.player_list):
+            s += f"{i+1}: {player.name}\n"
+        return s
+    
+    async def _add_reactions(self, msg: discord.Message, reactions: Iterable[str]):
+        for reaction in reactions:
+            await msg.add_reaction(reaction)

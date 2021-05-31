@@ -169,7 +169,7 @@ async def gifball(ctx: commands.Context, *args):
         )
         embed.set_thumbnail(url='http://d3s95l9oyr3kl.cloudfront.net/Magic_eight_ball.png')
         embed.set_image(url=url)
-        # Try to delete the message I LOVE YOU!!!!!!!!!!!!!!!<-------
+        # Try to delete the message
         await _delete_message(ctx.message)
         # Send the response
         await ctx.send(embed=embed)
