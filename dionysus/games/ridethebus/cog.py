@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, List, Iterable
+import asyncio
 
 import discord
 from discord.ext import commands
@@ -12,6 +13,12 @@ from utils import playingcards
 logger = logging.getLogger(__name__)
 
 COLOR = 0xFFFF00
+
+ROUND_RULES = {
+    GameState.RED_OR_BLACK: "Answer the questions to build your hand, drinking along the way.",
+    GameState.PYRAMID: "Play your matching cards to force others to drink.",
+    GameState.RIDE_THE_BUS: "The loser has to ride the bus, and drink. A lot.",
+}
 
 ROUND_MESSAGES = {
     GameState.RED_OR_BLACK: {
@@ -80,6 +87,7 @@ class RideTheBusCog(commands.Cog):
         await ctx.send(embed=embed)
         
         self.msg_refs.pop(reaction.message)
+        await asyncio.sleep(5)
         await self._handle_state(game)
     
     def _build_result(self, game: RideTheBus, result: Result):
@@ -112,7 +120,7 @@ class RideTheBusCog(commands.Cog):
             return
 
         embed = discord.Embed(
-            color=0x00FFFF,
+            color=COLOR,
             title="Ride The Bus",
             description="A card based drinking game.",
         )
@@ -172,12 +180,13 @@ class RideTheBusCog(commands.Cog):
         game.start()
         embed = self._build_round_start(game)
         await ctx.send(embed=embed)
+        await asyncio.sleep(5)
         await self._send_prompt(game)
 
     def _build_round_start(self, game: RideTheBus):
         player_list = self._build_player_list(game)
         embed = discord.Embed(color=COLOR, title="Ride The Bus",
-            description=f"Players:\n{player_list}"
+            description=f"{ROUND_RULES.get(game.state, '')}\n\nPlayers:\n{player_list}"
         )
         return embed
     

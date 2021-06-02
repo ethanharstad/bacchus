@@ -18,6 +18,8 @@ class GameState(IntEnum):
     HIGHER_OR_LOWER = 20
     INSIDE_OR_OUTSIDE = 30
     SUIT = 40
+    PYRAMID = 50
+    RIDE_THE_BUS = 90
     COMPLETE = 100
 
 
@@ -27,6 +29,8 @@ class RideTheBus:
         self.players: Dict[str, Player] = {}
         self.play_order: List[str] = []
         self.state: GameState = GameState.INIT
+        self.level: int = 0
+        self.pyramid: List[List[pydealer.Card]] = []
         self._index = 0
         self._deck = pydealer.Deck()
         self._deck.shuffle()
@@ -115,6 +119,12 @@ class RideTheBus:
             self.state = GameState.SUIT
             return
         if self.state == GameState.SUIT:
+            self.state = GameState.PYRAMID
+            return
+        if self.state == GameState.PYRAMID:
+            self.state = GameState.RIDE_THE_BUS
+            return
+        if self.state == GameState.RIDE_THE_BUS:
             self.state = GameState.COMPLETE
             return
 
