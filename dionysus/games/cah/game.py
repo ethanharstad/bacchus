@@ -15,7 +15,7 @@ from .player import Player
 
 logger = logging.getLogger(__name__)
 
-NUM_JUDGES = 0
+NUM_JUDGES = 1
 GAME_DATA_PATHS = [
     "data/games/cah/cah-cards-compact.json",
 ]
@@ -96,7 +96,7 @@ class CardsAgainstHumanity:
     def remove_player(self, player: Player):
         logger.info(f"Attempting to remove player {player.id}:{player.name}")
         # Can't remove a player that doesn't exist
-        if player.id not in self.player:
+        if player.id not in self.players:
             logger.warning(f"Player {player.id}:{player.name} does not exist")
             return False
         # Remove the player from the play order
@@ -158,16 +158,20 @@ class CardsAgainstHumanity:
         logger.info(f"Player {player.id}:{player.name} attempting to submit {answers}")
         # Can't submit if you aren't a player
         if player.id not in self.players:
-            raise ValueError("Player is not a member of the game.")
+            # TODO Use custom exception
+            raise KeyError("Player is not a member of the game.")
         # Can't submit if not in submission stage
         if self.state != GameState.WAITING_FOR_ANSWERS:
+            # TODO Use custom exception
             raise ValueError("You cannot submit answers right now.")
         # Can't submit if you're the judge
-        # if player.id == self.play_order[self.judge_index]:
-        #     raise ValueError("The judge cannot submit answers.")
+        if player.id == self.play_order[self.judge_index]:
+            # Todo Use custom exception
+            raise AssertionError("The judge cannot submit answers.")
         # Must submit the correct number of answers
         if len(answers) != self.question.pick:
-            raise ValueError(
+            # Todo Use custom exception
+            raise IndexError(
                 f"Player submitted {len(answers)} answers and the question requires {self.question.pick}."
             )
         # Add the submission, keyed by player id
@@ -180,8 +184,6 @@ class CardsAgainstHumanity:
         if self._check_answers():
             # Close out submissions
             self.finalize_answers()
-
-        return True
 
     def _check_answers(self):
         remaining_players = (len(self.players) - NUM_JUDGES) - len(self.submissions)

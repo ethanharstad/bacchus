@@ -213,11 +213,13 @@ class CardsAgainstHumanityCog(commands.Cog):
     async def submit(self, ctx, *args):
         user = ctx.author
         if user.id not in self.players:
-            pass
+            await ctx.message.reply(f"Sorry, you're not part of the game!")
+            return
 
         key = self.players[user.id]
         if key not in self.games:
-            pass
+            await ctx.message.reply(f"Sorry, I forgot which game you were playing... Try joining again?")
+            return
         ref = self.games[key]
         game = ref["game"]
 
@@ -233,8 +235,19 @@ class CardsAgainstHumanityCog(commands.Cog):
 
         logger.info("Submit: {}".format(answers))
         logger.info("Submit: {}".format(game.question.fill_in(answers)))
-        if not game.submit_answer(player, answers):
-            # handle submit failure
+        try:
+            game.submit_answer(player, answers)
+        except AssertionError:
+            await ctx.message.reply(f"You're the judge, you don't get to submit an answer!")
+            return
+        except ValueError:
+            await ctx.message.reply(f"You don't need to submit an answer right now. Tryhard.")
+            return
+        except KeyError:
+            await ctx.message.reply(f"Sorry, I forgot which game you were playing... Try joining again?")
+            return
+        except IndexError:
+            await ctx.message.reply(f"Dummy, you need to submit {game.question.pick} answers!")
             return
         await user.send("You played:\n> {}".format(game.question.fill_in(answers)))
 
@@ -272,16 +285,25 @@ class CardsAgainstHumanityCog(commands.Cog):
     async def debug(self, ctx):
         user = ctx.author
         if user.id not in self.players:
-            pass
-
+            return
         key = self.players[user.id]
+        
         if key not in self.games:
-            pass
+            return
         ref = self.games[key]
         game = ref["game"]
 
         game.start_round()
         for player_id in game.players:
             user = self.bot.get_user(player_id)
+            logger.info()
+            if player_id == game.get_judge_id:
+                embed = discord.Embed(
+                    title="Cards Against Humanity",
+                    description=f"You will be judging the answers fo\n> {game.question}",
+                    color=0x00FFFF
+                )
+                await user.send(embed=embed)
+                continue
             hand = self._build_hand_embed(game, player_id)
             await user.send(embed=hand)
