@@ -168,10 +168,12 @@ class CardsAgainstHumanityCog(commands.Cog):
     @cah.command(brief="Join an existing Cards Against Humanity game")
     async def join(self, ctx, key: str):
         if key not in self.games:
-            pass
+            await ctx.message.reply("Sorry, that game key doesn't exist.")
+            return
         user = ctx.author
         if user.id in self.players:
-            pass
+            await ctx.message.reply("You're alredy in a game, leave it first before joining this one.")
+            return
         ref = self.games[key]
         game = ref["game"]
 
@@ -232,18 +234,19 @@ class CardsAgainstHumanityCog(commands.Cog):
     async def submit(self, ctx, *args):
         user = ctx.author
         if user.id not in self.players:
-            await ctx.message.reply(f"Sorry, you're not part of the game!")
+            await ctx.message.reply("Sorry, you're not part of any games!")
             return
 
         key = self.players[user.id]
         if key not in self.games:
-            await ctx.message.reply(f"Sorry, I forgot which game you were playing... Try joining again?")
+            await ctx.message.reply("Sorry, I forgot which game you were playing... Try joining again?")
             return
         ref = self.games[key]
         game = ref["game"]
 
         if user.id not in game.players:
-            pass
+            await ctx.message.reply("You're not part of the game so you can't start it.")
+            return
         player = game.players[user.id]
 
         answers = []
