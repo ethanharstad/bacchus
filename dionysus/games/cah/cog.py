@@ -60,7 +60,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         submissions = sorted(game.submissions, key=lambda x: game.players[x].name)
         embed = discord.Embed(
             title="Cards Against Humanity",
-            description=f"{game.players[winner].name} is the winner!",
+            description=f"{game.players[game.get_judge_id()].name} chose {game.players[winner].name} as the winner!",
             color=COLOR,
         )
         embed.add_field(
