@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 import discord
@@ -8,6 +9,7 @@ from .game import CardsAgainstHumanity, GameState, Player, ANSWERS, QUESTIONS
 
 logger = logging.getLogger(__name__)
 
+COLOR = 0x00FFFF
 
 class CardsAgainstHumanityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -25,7 +27,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         embed = discord.Embed(
             title="Cards Against Humanity",
             description=f"Choose your best answer to:\n> {game.question}\nSubmit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`",
-            color=0x00FFFF,
+            color=COLOR,
         )
 
         for i, answer in enumerate(player.hand):
@@ -37,7 +39,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         embed = discord.Embed(
             title="Cards Against Humanity",
             description=f"Choose the best answer to:\n{game.question}\nSelect the winner with `{self.bot.command_prefix}cah choose [id]`",
-            color=0x00FFFF,
+            color=COLOR,
         )
         for i, submission_id in enumerate(game.submission_mapping):
             answer = game.submissions[submission_id]
@@ -53,7 +55,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         embed = discord.Embed(
             title="Cards Against Humanity",
             description=f"{game.players[winner].name} is the winner!",
-            color=0x00FFFF,
+            color=COLOR,
         )
         embed.add_field(
             name=emoji.emojize(f":star: {game.players[winner].name} :star:"),
@@ -81,60 +83,69 @@ class CardsAgainstHumanityCog(commands.Cog):
         embed = discord.Embed(
             title="Cards Against Humanity",
             description=f"Scores after {game.round} rounds:\n{scores}",
-            color=0x00FFFF,
+            color=COLOR,
         )
         return embed
 
-    @commands.group()
+    @commands.group(brief="Overview of Cards Against Humanity")
     async def cah(self, ctx):
-        # async def cah(ctx, user: discord.User = None):
-        if ctx.invoked_subcommand is None:
-            # user = user or ctx.author
-            user = ctx.author
-            if not ctx.guild:
-                await ctx.send(
-                    "Sorry {user.display_name}, you can only play this game inside a server.".format(
-                        user=user
-                    )
-                )
-                return False
-
-            game = CardsAgainstHumanity()
-            self.games[game.key] = {
-                "guild": ctx.guild,
-                "channel": ctx.channel,
-                "game": game,
-            }
-
-            embed = discord.Embed(
-                title="Cards Against Humanity",
-                description="Fill in the blank using politically incorrect words or phrases.",
-                color=0x00FFFF,
-            )
-            embed.set_footer(
-                text="Game {game.key} created by {user.display_name}".format(
-                    user=user, game=game
+        if ctx.invoked_subcommand is not None:
+            return
+            
+        embed = discord.Embed(
+            color=COLOR,
+            title="Cards Against Humanity",
+            description=f"An irreverant card game.\nUse `{self.bot.command_prefix}cah create` to form a game.",
+        )
+        await ctx.send(embed=embed)
+    
+    @cah.command(brief="Create a game of Cards Against Humanity")
+    async def create(self, ctx: commands.Context):
+        user = ctx.author
+        if not ctx.guild:
+            await ctx.send(
+                "Sorry {user.display_name}, you can only play this game inside a server.".format(
+                    user=user
                 )
             )
-            embed.add_field(
-                name="{prefix}cah join {key}".format(
-                    prefix=self.bot.command_prefix, key=game.key
-                ),
-                value="to join",
-                inline=True,
-            )
-            embed.add_field(
-                name="{prefix}cah start {key}".format(
-                    prefix=self.bot.command_prefix, key=game.key
-                ),
-                value="to start",
-                inline=True,
-            )
+            return False
 
-            await ctx.send(embed=embed)
-            return True
+        game = CardsAgainstHumanity()
+        self.games[game.key] = {
+            "guild": ctx.guild,
+            "channel": ctx.channel,
+            "game": game,
+        }
 
-    @cah.command()
+        embed = discord.Embed(
+            title="Cards Against Humanity",
+            description="Fill in the blank using politically incorrect words or phrases.",
+            color=COLOR,
+        )
+        embed.set_footer(
+            text="Game {game.key} created by {user.display_name}".format(
+                user=user, game=game
+            )
+        )
+        embed.add_field(
+            name="{prefix}cah join {key}".format(
+                prefix=self.bot.command_prefix, key=game.key
+            ),
+            value="to join",
+            inline=True,
+        )
+        embed.add_field(
+            name="{prefix}cah start {key}".format(
+                prefix=self.bot.command_prefix, key=game.key
+            ),
+            value="to start",
+            inline=True,
+        )
+
+        await ctx.send(embed=embed)
+        return True
+
+    @cah.command(hidden=True, brief="Deal a random Cards Against Humanity hand [DEBUG]")
     async def deal(self, ctx):
         hand = random.choices(ANSWERS, k=8)
         question = random.choice(QUESTIONS)
@@ -148,7 +159,7 @@ class CardsAgainstHumanityCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @cah.command()
+    @cah.command(brief="Join an existing Cards Against Humanity game")
     async def join(self, ctx, key: str):
         if key not in self.games:
             pass
@@ -168,7 +179,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         else:
             pass
 
-    @cah.command()
+    @cah.command(brief="Start a Cards Against Humanity game")
     async def start(self, ctx):
         user = ctx.author
         if user.id not in self.players:
@@ -201,7 +212,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         embed = discord.Embed(
             title="Cards Against Humanity",
             description="Started by {user.display_name}!",
-            color=0x00FFFF,
+            color=COLOR,
         )
         embed.set_footer(
             text="Cards Against Humanity game {game.key}".format(game=game)
@@ -209,7 +220,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         await ref["channel"].send(embed=embed)
         return True
 
-    @cah.command()
+    @cah.command(brief="Submit an answer to a round of Cards Against Humanity")
     async def submit(self, ctx, *args):
         user = ctx.author
         if user.id not in self.players:
@@ -260,7 +271,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         judge = self.bot.get_user(game.get_judge_id())
         await judge.send(embed=embed)
 
-    @cah.command()
+    @cah.command(brief="Choose the winning answer to a round of Cards Against Humanity")
     async def choose(self, ctx, answer_id: int):
         user = ctx.author
         if user.id not in self.players:
@@ -279,9 +290,10 @@ class CardsAgainstHumanityCog(commands.Cog):
         if game.state == GameState.ROUND_COMPLETE:
             channel = ref["channel"]
             await channel.send(embed=self._build_winner_embed(game))
+            await asyncio.sleep(3)
             await channel.send(embed=self._build_score_embed(game))
 
-    @cah.command()
+    @cah.command(brief="Start a round of Cards Against Humanity [DEBUG]")
     async def debug(self, ctx):
         user = ctx.author
         if user.id not in self.players:
@@ -296,12 +308,11 @@ class CardsAgainstHumanityCog(commands.Cog):
         game.start_round()
         for player_id in game.players:
             user = self.bot.get_user(player_id)
-            logger.info()
-            if player_id == game.get_judge_id:
+            if player_id == game.get_judge_id():
                 embed = discord.Embed(
                     title="Cards Against Humanity",
                     description=f"You will be judging the answers fo\n> {game.question}",
-                    color=0x00FFFF
+                    color=COLOR
                 )
                 await user.send(embed=embed)
                 continue

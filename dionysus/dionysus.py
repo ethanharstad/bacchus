@@ -51,13 +51,13 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
-@bot.command()
+@bot.command(brief="Ping the bot [DEBUG]")
 async def ping(ctx: commands.Context):
     logger.info("got ping")
     await ctx.send("pong")
 
 
-@bot.command()
+@bot.command(brief="Report a problem with the bot")
 async def complain(ctx: commands.Context, *args):
     owner: discord.User = bot.appinfo.owner
     embed = discord.Embed(

@@ -87,7 +87,7 @@ class RideTheBusCog(commands.Cog):
         await ctx.send(embed=embed)
         
         self.msg_refs.pop(reaction.message)
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
         await self._handle_state(game)
     
     def _build_result(self, game: RideTheBus, result: Result):
@@ -114,7 +114,7 @@ class RideTheBusCog(commands.Cog):
             return
         await self._send_prompt(game)
     
-    @commands.group()
+    @commands.group(brief="Overview of Ride The Bus")
     async def bus(self, ctx: commands.Context):
         if ctx.invoked_subcommand is not None:
             return
@@ -126,7 +126,7 @@ class RideTheBusCog(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @bus.command()
+    @bus.command(brief="Create a game of Ride The Bus")
     async def create(self, ctx: commands.Context):
         if ctx.channel in self.channels:
             await ctx.reply(
@@ -144,7 +144,7 @@ class RideTheBusCog(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @bus.command()
+    @bus.command(brief="Join an existing game of Ride The Bus")
     async def join(self, ctx: commands.Context, key: str):
         if key not in self.keys:
             await ctx.reply(f"Sorry, there is no game with the key {key}...")
@@ -159,7 +159,7 @@ class RideTheBusCog(commands.Cog):
         self.players[user] = game
         await ctx.reply(f"You have joined the game {game.key}!")
 
-    @bus.command()
+    @bus.command(brief="Leave your game of Ride The Bus")
     async def leave(self, ctx: commands.Context):
         if ctx.author not in self.players:
             await ctx.reply(f"Sorry, you're not in any games you can leave...")
@@ -172,7 +172,7 @@ class RideTheBusCog(commands.Cog):
         self.players.pop(ctx.author)
         await ctx.reply(f"You have left the game {game.key}.")
 
-    @bus.command()
+    @bus.command(brief="Start a game of Ride The Bus")
     async def start(self, ctx: commands.Context):
         if ctx.author not in self.players:
             await ctx.reply(f"Sorry, you're not in any games you can start...")

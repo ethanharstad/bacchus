@@ -48,7 +48,7 @@ class ChanceCog(commands.Cog):
         super().__init__()
         self.bot: commands.Bot = bot
         
-    @commands.command()
+    @commands.command(brief="Roll dice using standard dice notation (1d6)")
     async def roll(self, ctx: commands.Context, fmt: str = "1d6"):
         logger.info("Got dice command {fmt}".format(fmt=fmt))
         try:
@@ -82,7 +82,7 @@ class ChanceCog(commands.Cog):
         if msg.channel.type == discord.ChannelType.text:
             await msg.delete()
     
-    @commands.command(name="8ball")
+    @commands.command(name="8ball", brief="Ask the Magic Eight Ball (text)")
     async def eight_ball(self, ctx: commands.Context, *args):
         # Get the length of the possible responses
         n = len(EIGHT_BALL_RESPONSES)
@@ -103,7 +103,7 @@ class ChanceCog(commands.Cog):
         embed.set_thumbnail(url='http://d3s95l9oyr3kl.cloudfront.net/Magic_eight_ball.png')
         await ctx.send(embed=embed)
         
-    @commands.command()
+    @commands.command(brief="Ask the Magic Eight Ball (gif)")
     async def gifball(self, ctx: commands.Context, *args):
         # Pick a random offset to get a random gif
         seed = random.randrange(100)
