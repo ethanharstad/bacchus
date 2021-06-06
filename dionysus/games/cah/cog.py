@@ -24,9 +24,11 @@ class CardsAgainstHumanityCog(commands.Cog):
     def _build_hand_embed(self, game: CardsAgainstHumanity, player_id: int):
         player: Player = game.players[player_id]
 
+        desc = f"Choose your best answer to:\n> {game.question}\nSubmit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`"
+        logger.info(f"Hand Desc: {desc}")
         embed = discord.Embed(
             title="Cards Against Humanity",
-            description=f"Choose your best answer to:\n> {game.question}\nSubmit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`",
+            description=desc,
             color=COLOR,
         )
 
@@ -289,9 +291,19 @@ class CardsAgainstHumanityCog(commands.Cog):
         game.choose_winner(answer_id - 1)
         if game.state == GameState.ROUND_COMPLETE:
             channel = ref["channel"]
-            await channel.send(embed=self._build_winner_embed(game))
-            await asyncio.sleep(3)
-            await channel.send(embed=self._build_score_embed(game))
+            
+            winner_embed = self._build_winner_embed(game)
+            await channel.send(embed=winner_embed)
+            for player_id in game.players:
+                user = self.bot.get_user(player_id)
+                if player_id == game.get_judge_id():
+                    await user.send(embed=winner_embed)
+            
+            score_embed = self._build_score_embed(game)
+            await channel.send(embed=score_embed)
+            for player_id in game.players:
+                user = self.bot.get_user(player_id)
+                await user.send(embed=score_embed)
 
     @cah.command(brief="Start a round of Cards Against Humanity [DEBUG]")
     async def debug(self, ctx):
