@@ -22,10 +22,14 @@ class CardsAgainstHumanityCog(commands.Cog):
         self.players = {}
 
     def _build_hand_embed(self, game: CardsAgainstHumanity, player_id: int):
+        judge: discord.User = self.bot.get_user(game.get_judge_id())
         player: Player = game.players[player_id]
-
-        desc = f"Choose your best answer to:\n> {game.question}\nSubmit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`"
+        
+        q = "\n".join(['> ' + s for s in game.question.split("\n")])
+        prompt = f"Submit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`"
+        desc = f"Choose your best answer to:\n{q}\n{judge.name} will be judging.\n{prompt}"
         logger.info(f"Hand Desc: {desc}")
+        
         embed = discord.Embed(
             title="Cards Against Humanity",
             description=desc,
