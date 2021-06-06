@@ -251,7 +251,6 @@ class CardsAgainstHumanityCog(commands.Cog):
             answers.append(a)
 
         logger.info("Submit: {}".format(answers))
-        logger.info("Submit: {}".format(game.question.fill_in(answers)))
         try:
             game.submit_answer(player, answers)
         except AssertionError:
@@ -266,6 +265,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         except IndexError:
             await ctx.message.reply(f"Dummy, you need to submit {game.question.pick} answers!")
             return
+        logger.info("Submit: {}".format(game.question.fill_in(answers)))
         await user.send("You played:\n> {}".format(game.question.fill_in(answers)))
 
         # Check if the game is ready to judge
