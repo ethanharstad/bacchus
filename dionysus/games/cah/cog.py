@@ -189,11 +189,13 @@ class CardsAgainstHumanityCog(commands.Cog):
     async def start(self, ctx):
         user = ctx.author
         if user.id not in self.players:
-            pass
+            await ctx.message.reply("You need to join a game before you can start it.")
+            return
 
         key = self.players[user.id]
         if key not in self.games:
-            pass
+            await ctx.message.reply("Something seems to have gone wrong. Try joining a new game.")
+            return
         ref = self.games[key]
         game = ref["game"]
 
