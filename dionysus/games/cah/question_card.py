@@ -35,7 +35,7 @@ class QuestionCard:
             answers = [r"\_\_\_\_\_" for i in range(self.pick)]
         else:
             if len(answers) != self.pick:
-                raise ValueError(
+                raise IndexError(
                     "Question requires {pick} answers and {answers} were provided.".format(
                         pick=self.pick, answers=len(answers)
                     )
