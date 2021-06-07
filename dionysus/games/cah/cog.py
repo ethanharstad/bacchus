@@ -215,7 +215,7 @@ class CardsAgainstHumanityCog(commands.Cog):
                     game=game, guild=ref["guild"], channel=ref["channel"]
                 )
             )
-            return False
+            return
         # The game requires at least 3 players
         if len(game.players) < 3:
             await ctx.message.reply(
@@ -223,7 +223,7 @@ class CardsAgainstHumanityCog(commands.Cog):
                     game=game, guild=ref["guild"], channel=ref["channel"]
                 )
             )
-            return False
+            return
 
         # Start the game!
         embed = discord.Embed(
@@ -235,7 +235,14 @@ class CardsAgainstHumanityCog(commands.Cog):
             text="Cards Against Humanity game {game.key}".format(game=game)
         )
         await ref["channel"].send(embed=embed)
-        return True
+
+        asyncio.sleep(5)
+        self._play_round(game)
+
+    @cah.command(brief="Stop a Cards Against Humanity game")
+    async def stop(self, ctx):
+        # TODO stop the game
+        pass
 
     @cah.command(brief="Submit an answer to a round of Cards Against Humanity")
     async def submit(self, ctx, *args):
@@ -317,7 +324,7 @@ class CardsAgainstHumanityCog(commands.Cog):
             return
 
         game.choose_winner(answer_id - 1)
-        if game.state == GameState.ROUND_COMPLETE:
+        if game.state in [GameState.ROUND_COMPLETE, GameState.GAME_OVER]:
             channel = ref["channel"]
 
             winner_embed = self._build_winner_embed(game)
@@ -333,18 +340,15 @@ class CardsAgainstHumanityCog(commands.Cog):
                 user = self.bot.get_user(player_id)
                 await user.send(embed=score_embed)
 
-    @cah.command(brief="Start a round of Cards Against Humanity [DEBUG]")
-    async def debug(self, ctx):
-        user = ctx.author
-        if user.id not in self.players:
+        if game.state == GameState.GAME_OVER:
+            # End the game
             return
-        key = self.players[user.id]
 
-        if key not in self.games:
-            return
-        ref = self.games[key]
-        game = ref["game"]
+        # Continue to the next round
+        asyncio.sleep(5)
+        self._play_round(game)
 
+    async def _play_round(self, game: CardsAgainstHumanity):
         game.start_round()
         for player_id in game.players:
             user = self.bot.get_user(player_id)
@@ -358,3 +362,17 @@ class CardsAgainstHumanityCog(commands.Cog):
                 continue
             hand = self._build_hand_embed(game, player_id)
             await user.send(embed=hand)
+
+    @cah.command(brief="Start a round of Cards Against Humanity [DEBUG]")
+    async def debug(self, ctx):
+        user = ctx.author
+        if user.id not in self.players:
+            return
+        key = self.players[user.id]
+
+        if key not in self.games:
+            return
+        ref = self.games[key]
+        game = ref["game"]
+
+        await self._play_round(game)
