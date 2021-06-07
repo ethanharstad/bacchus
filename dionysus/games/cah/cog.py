@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 COLOR = 0x00FFFF
 
+
 class CardsAgainstHumanityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         super().__init__()
@@ -24,12 +25,14 @@ class CardsAgainstHumanityCog(commands.Cog):
     def _build_hand_embed(self, game: CardsAgainstHumanity, player_id: int):
         judge: discord.User = self.bot.get_user(game.get_judge_id())
         player: Player = game.players[player_id]
-        
-        q = "\n".join(['> ' + s for s in game.question.split("\n")])
+
+        q = "\n".join(["> " + s for s in game.question.split("\n")])
         prompt = f"Submit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`"
-        desc = f"Choose your best answer to:\n{q}\n{judge.name} will be judging.\n{prompt}"
+        desc = (
+            f"Choose your best answer to:\n{q}\n{judge.name} will be judging.\n{prompt}"
+        )
         logger.info(f"Hand Desc: {desc}")
-        
+
         embed = discord.Embed(
             title="Cards Against Humanity",
             description=desc,
@@ -97,14 +100,14 @@ class CardsAgainstHumanityCog(commands.Cog):
     async def cah(self, ctx):
         if ctx.invoked_subcommand is not None:
             return
-            
+
         embed = discord.Embed(
             color=COLOR,
             title="Cards Against Humanity",
             description=f"An irreverant card game.\nUse `{self.bot.command_prefix}cah create` to form a game.",
         )
         await ctx.send(embed=embed)
-    
+
     @cah.command(brief="Create a game of Cards Against Humanity")
     async def create(self, ctx: commands.Context):
         user = ctx.author
@@ -172,7 +175,9 @@ class CardsAgainstHumanityCog(commands.Cog):
             return
         user = ctx.author
         if user.id in self.players:
-            await ctx.message.reply("You're alredy in a game, leave it first before joining this one.")
+            await ctx.message.reply(
+                "You're alredy in a game, leave it first before joining this one."
+            )
             return
         ref = self.games[key]
         game = ref["game"]
@@ -196,14 +201,16 @@ class CardsAgainstHumanityCog(commands.Cog):
 
         key = self.players[user.id]
         if key not in self.games:
-            await ctx.message.reply("Something seems to have gone wrong. Try joining a new game.")
+            await ctx.message.reply(
+                "Something seems to have gone wrong. Try joining a new game."
+            )
             return
         ref = self.games[key]
         game = ref["game"]
 
         # The game requires you to be a member in order to start it
         if user.id not in game.players:
-            await user.send(
+            await ctx.message.reply(
                 "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because you haven't joined it.".format(
                     game=game, guild=ref["guild"], channel=ref["channel"]
                 )
@@ -211,7 +218,7 @@ class CardsAgainstHumanityCog(commands.Cog):
             return False
         # The game requires at least 3 players
         if len(game.players) < 3:
-            await user.send(
+            await ctx.message.reply(
                 "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because it doesn't have enough players yet.".format(
                     game=game, guild=ref["guild"], channel=ref["channel"]
                 )
@@ -239,13 +246,17 @@ class CardsAgainstHumanityCog(commands.Cog):
 
         key = self.players[user.id]
         if key not in self.games:
-            await ctx.message.reply("Sorry, I forgot which game you were playing... Try joining again?")
+            await ctx.message.reply(
+                "Sorry, I forgot which game you were playing... Try joining again?"
+            )
             return
         ref = self.games[key]
         game = ref["game"]
 
         if user.id not in game.players:
-            await ctx.message.reply("You're not part of the game so you can't start it.")
+            await ctx.message.reply(
+                "You're not part of the game so you can't start it."
+            )
             return
         player = game.players[user.id]
 
@@ -259,16 +270,24 @@ class CardsAgainstHumanityCog(commands.Cog):
         try:
             game.submit_answer(player, answers)
         except AssertionError:
-            await ctx.message.reply(f"You're the judge, you don't get to submit an answer!")
+            await ctx.message.reply(
+                f"You're the judge, you don't get to submit an answer!"
+            )
             return
         except ValueError:
-            await ctx.message.reply(f"You don't need to submit an answer right now. Tryhard.")
+            await ctx.message.reply(
+                f"You don't need to submit an answer right now. Tryhard."
+            )
             return
         except KeyError:
-            await ctx.message.reply(f"Sorry, I forgot which game you were playing... Try joining again?")
+            await ctx.message.reply(
+                f"Sorry, I forgot which game you were playing... Try joining again?"
+            )
             return
         except IndexError:
-            await ctx.message.reply(f"Dummy, you need to submit {game.question.pick} answers!")
+            await ctx.message.reply(
+                f"Dummy, you need to submit {game.question.pick} answers!"
+            )
             return
         logger.info("Submit: {}".format(game.question.fill_in(answers)))
         await user.send("You played:\n> {}".format(game.question.fill_in(answers)))
@@ -300,14 +319,14 @@ class CardsAgainstHumanityCog(commands.Cog):
         game.choose_winner(answer_id - 1)
         if game.state == GameState.ROUND_COMPLETE:
             channel = ref["channel"]
-            
+
             winner_embed = self._build_winner_embed(game)
             await channel.send(embed=winner_embed)
             for player_id in game.players:
                 user = self.bot.get_user(player_id)
                 if player_id == game.get_judge_id():
                     await user.send(embed=winner_embed)
-            
+
             score_embed = self._build_score_embed(game)
             await channel.send(embed=score_embed)
             for player_id in game.players:
@@ -320,7 +339,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         if user.id not in self.players:
             return
         key = self.players[user.id]
-        
+
         if key not in self.games:
             return
         ref = self.games[key]
@@ -333,7 +352,7 @@ class CardsAgainstHumanityCog(commands.Cog):
                 embed = discord.Embed(
                     title="Cards Against Humanity",
                     description=f"You will be judging the answers fo\n> {game.question}",
-                    color=COLOR
+                    color=COLOR,
                 )
                 await user.send(embed=embed)
                 continue

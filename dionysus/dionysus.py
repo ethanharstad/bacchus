@@ -37,15 +37,16 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents, activity=acti
 
 @bot.event
 async def on_ready():
-    if not hasattr(bot, 'appinfo'):
+    if not hasattr(bot, "appinfo"):
         bot.appinfo: discord.AppInfo = await bot.application_info()
     logger.info("We have logged in as {0.user}".format(bot))
-    
+
+
 @bot.event
 async def on_message(message):
     # See if the bot was mentioned
     if bot.user.mentioned_in(message):
-        if 'fuck' in message.content:
+        if "fuck" in message.content:
             await message.reply("Fuck you too!")
     # See if any commands were in this message
     await bot.process_commands(message)
@@ -60,11 +61,7 @@ async def ping(ctx: commands.Context):
 @bot.command(brief="Report a problem with the bot")
 async def complain(ctx: commands.Context, *args):
     owner: discord.User = bot.appinfo.owner
-    embed = discord.Embed(
-        title="COMPLAINT",
-        color=0xFF0000,
-        description=' '.join(args)
-    )
+    embed = discord.Embed(title="COMPLAINT", color=0xFF0000, description=" ".join(args))
     embed.set_author(
         name=ctx.author.name,
         icon_url=ctx.author.avatar_url,
@@ -73,8 +70,9 @@ async def complain(ctx: commands.Context, *args):
         embed.set_footer(text=f"{ctx.guild.name}:{ctx.channel.name}")
     await ctx.author.send(embed=embed)
     await owner.send(embed=embed)
-    
-bot.add_cog(ChanceCog(bot))    
+
+
+bot.add_cog(ChanceCog(bot))
 bot.add_cog(CardsAgainstHumanityCog(bot))
 bot.add_cog(RideTheBusCog(bot))
 

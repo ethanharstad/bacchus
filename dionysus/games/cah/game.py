@@ -54,7 +54,7 @@ class GameState(IntEnum):
 # TODO speed mode
 # TODO Rando Cardrissian
 class CardsAgainstHumanity:
-    def __init__(self, cards_per_hand=8):
+    def __init__(self, cards_per_hand=8, round_limit=0, score_limit=5):
         self.key: str = petname.Generate(2, "-")
         self.cards_per_hand: int = cards_per_hand
         self.questions: Set[QuestionCard] = set()
@@ -62,6 +62,8 @@ class CardsAgainstHumanity:
         self.players: Dict[int, Player] = dict()
         self.play_order: List[int] = []
         self.round: int = 0
+        self.round_limit: int = round_limit
+        self.score_limit: int = score_limit
         self.judge_index: int = -1
         self.question: QuestionCard = None
         self.state: GameState = GameState.INIT

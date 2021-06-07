@@ -66,14 +66,14 @@ class RideTheBus:
             self._deck.shuffle()
         self.current_player.cards.append(card)
         result = self._score_round(player, guess)
-        
+
         # Move on
         self._index += 1
         if self._index >= len(self.players):
             self._next_round()
-        
+
         return Result(player, result)
-    
+
     def _validate_draw(self, player: Player, card: pydealer.Card):
         if self.state is GameState.HIGHER_OR_LOWER:
             return card.value != player.cards[-1].value
@@ -85,10 +85,10 @@ class RideTheBus:
         logger.info(f"{player.id} guessed {guess} for {player.cards}")
         dealt = player.cards[-1]
         if self.state is GameState.RED_OR_BLACK:
-            if dealt.suit in ['Clubs', 'Spades']:
-                color = 'black'
+            if dealt.suit in ["Clubs", "Spades"]:
+                color = "black"
             else:
-                color = 'red'
+                color = "red"
             return guess == color
         elif self.state is GameState.HIGHER_OR_LOWER:
             prev = player.cards[-2]
@@ -106,7 +106,7 @@ class RideTheBus:
         elif self.state is GameState.SUIT:
             return dealt.suit.lower() == guess
         return None
-    
+
     def _next_round(self):
         self._index = 0
         if self.state == GameState.RED_OR_BLACK:

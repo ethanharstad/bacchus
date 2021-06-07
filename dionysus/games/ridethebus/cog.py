@@ -43,7 +43,9 @@ ROUND_MESSAGES = {
         },
     },
     GameState.SUIT: {
-        "prompt": emoji.emojize(":clubs: Club, :diamonds: Diamond, :hearts: Heart, or :spades: Spade?"),
+        "prompt": emoji.emojize(
+            ":clubs: Club, :diamonds: Diamond, :hearts: Heart, or :spades: Spade?"
+        ),
         "reactions": {
             "♣️": "clubs",
             "♦️": "diamonds",
@@ -81,39 +83,45 @@ class RideTheBusCog(commands.Cog):
             await reaction.message.remove_reaction(reaction, user)
             return
         logger.info(f"Processing {reaction} by {user} in {game.key}")
-        result = game.guess(user.id, ROUND_MESSAGES[game.state]["reactions"][reaction.emoji])
+        result = game.guess(
+            user.id, ROUND_MESSAGES[game.state]["reactions"][reaction.emoji]
+        )
         embed = self._build_result(game, result)
         ctx = self.context[game.key]
         await ctx.send(embed=embed)
-        
+
         self.msg_refs.pop(reaction.message)
         await asyncio.sleep(3)
         await self._handle_state(game)
-    
+
     def _build_result(self, game: RideTheBus, result: Result):
         user = self.bot.get_user(result.player.id)
         card = result.player.cards[-1]
         result = "WON" if result.successful else "LOST"
-        embed = discord.Embed(color=COLOR, title="Ride The Bus", description=f"Drew {card} and {result}")
+        embed = discord.Embed(
+            color=COLOR, title="Ride The Bus", description=f"Drew {card} and {result}"
+        )
         embed.set_author(name=user.display_name, icon_url=user.avatar_url)
         embed.set_image(url=playingcards.get_card_image_url(card))
         return embed
-    
-    def _validate_reaction(self, game: RideTheBus, reaction: discord.Reaction, user: discord.User):
+
+    def _validate_reaction(
+        self, game: RideTheBus, reaction: discord.Reaction, user: discord.User
+    ):
         if user.id is not game.current_player.id:
             return False
         try:
-            if reaction.emoji not in ROUND_MESSAGES[game.state]['reactions']:
+            if reaction.emoji not in ROUND_MESSAGES[game.state]["reactions"]:
                 return False
         except:
             return False
         return True
-    
+
     async def _handle_state(self, game: RideTheBus):
         if game.state in [GameState.INIT, GameState.COMPLETE]:
             return
         await self._send_prompt(game)
-    
+
     @commands.group(brief="Overview of Ride The Bus")
     async def bus(self, ctx: commands.Context):
         if ctx.invoked_subcommand is not None:
@@ -185,32 +193,33 @@ class RideTheBusCog(commands.Cog):
 
     def _build_round_start(self, game: RideTheBus):
         player_list = self._build_player_list(game)
-        embed = discord.Embed(color=COLOR, title="Ride The Bus",
-            description=f"{ROUND_RULES.get(game.state, '')}\n\nPlayers:\n{player_list}"
+        embed = discord.Embed(
+            color=COLOR,
+            title="Ride The Bus",
+            description=f"{ROUND_RULES.get(game.state, '')}\n\nPlayers:\n{player_list}",
         )
         return embed
-    
+
     async def _send_prompt(self, game: RideTheBus):
         ctx = self.context[game.key]
         user = self.bot.get_user(game.current_player.id)
         embed = self._build_prompt(game, user)
         msg = await ctx.send(embed=embed)
-        await self._add_reactions(msg, ROUND_MESSAGES[game.state]['reactions'].keys())
+        await self._add_reactions(msg, ROUND_MESSAGES[game.state]["reactions"].keys())
         self.msg_refs[msg] = game
-        
-    
+
     def _build_prompt(self, game: RideTheBus, user: discord.User):
-        prompt = ROUND_MESSAGES[game.state]['prompt']
+        prompt = ROUND_MESSAGES[game.state]["prompt"]
         embed = discord.Embed(color=COLOR, title="Ride The Bus", description=prompt)
         embed.set_author(name=user.display_name, icon_url=user.avatar_url)
         return embed
-    
+
     def _build_player_list(self, game: RideTheBus):
         s = ""
         for i, player in enumerate(game.player_list):
             s += f"{i+1}: {player.name}\n"
         return s
-    
+
     async def _add_reactions(self, msg: discord.Message, reactions: Iterable[str]):
         for reaction in reactions:
             await msg.add_reaction(reaction)
