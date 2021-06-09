@@ -25,11 +25,17 @@ class GameState(IntEnum):
 
 class RideTheBus:
     def __init__(self):
+        # The "name" of this instance of the game
         self.key: str = petname.Generate(2, "-")
+        # The players of this game by their id
         self.players: Dict[str, Player] = {}
+        # The order that the players are in
         self.play_order: List[str] = []
+        # The stage of the game
         self.state: GameState = GameState.INIT
+        # The level of the pyramid
         self.level: int = 0
+        # The cards in the pyramid
         self.pyramid: List[List[pydealer.Card]] = []
         self._index = 0
         self._deck = pydealer.Deck()

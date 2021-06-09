@@ -133,7 +133,7 @@ class ChanceCog(commands.Cog):
             )
             embed.set_image(url=url)
             # Try to delete the message
-            await _delete_message(ctx.message)
+            await ChanceCog._delete_message(ctx.message)
             # Send the response
             await ctx.send(embed=embed)
         except:
