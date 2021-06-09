@@ -23,6 +23,7 @@ jobs:
 
       - name: Build
         run: |
+            ls
             cd site
             hugo --minify
 
