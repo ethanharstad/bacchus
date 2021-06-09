@@ -13,7 +13,7 @@ subtitle = "An irreverent Discord bot"
   image = "header.jpg"
 
 [asset]
-  image = "logo.png"
+  image = "logo.jpg"
   width = "500px" # optional - will default to image width
   #height = "150px" # optional - will default to image height
 +++
