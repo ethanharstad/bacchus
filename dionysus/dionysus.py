@@ -13,6 +13,7 @@ from discord.ext import commands
 import emoji
 
 from chance import ChanceCog
+from mocking import MockingCog
 from games.cah.cog import CardsAgainstHumanityCog
 from games.ridethebus.cog import RideTheBusCog
 
@@ -42,15 +43,6 @@ async def on_ready():
     logger.info("We have logged in as {0.user}".format(bot))
 
 
-@bot.event
-async def on_message(message):
-    # See if the bot was mentioned
-    if bot.user.mentioned_in(message):
-        if "fuck" in message.content:
-            await message.reply("Fuck you too!")
-    # See if any commands were in this message
-    await bot.process_commands(message)
-
 
 @bot.command(brief="Ping the bot [DEBUG]")
 async def ping(ctx: commands.Context):
@@ -73,6 +65,7 @@ async def complain(ctx: commands.Context, *args):
 
 
 bot.add_cog(ChanceCog(bot))
+bot.add_cog(MockingCog(bot))
 bot.add_cog(CardsAgainstHumanityCog(bot))
 bot.add_cog(RideTheBusCog(bot))
 

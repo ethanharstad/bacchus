@@ -360,6 +360,15 @@ class CardsAgainstHumanityCog(commands.Cog):
         if game.state == GameState.GAME_OVER:
             # End the game
             return
+<<<<<<< HEAD
+=======
+        key = self.players[user.id]
+
+        if key not in self.games:
+            return
+        ref = self.games[key]
+        game = ref["game"]
+>>>>>>> main
 
         # Continue to the next round
         await asyncio.sleep(5)
@@ -372,7 +381,11 @@ class CardsAgainstHumanityCog(commands.Cog):
             if player_id == game.get_judge_id():
                 embed = discord.Embed(
                     title="Cards Against Humanity",
+<<<<<<< HEAD
                     description=f"You will be judging the answers for\n> {game.question}",
+=======
+                    description=f"You will be judging the answers fo\n> {game.question}",
+>>>>>>> main
                     color=COLOR,
                 )
                 await user.send(embed=embed)
