@@ -1,7 +1,7 @@
 # Site settings
-baseurl = "/"
+baseurl = "https://bacchus.gg"
 languageCode = "en-us"
-title = "Okkur - Syna"
+title = "Bacchus Bot"
 theme = "syna"
 enableGitInfo = true
 version = "0.17.3"
@@ -25,7 +25,7 @@ lastmod = ["lastmod", ":git", "date"]
 
 [params]
   name = "Okkur Labs"
-  description = "Open Source Theme for your next project"
+  description = "An irreverent Discord bot for parties."
 
   [params.style]
     #background = "secondary"
@@ -74,11 +74,6 @@ lastmod = ["lastmod", ":git", "date"]
   url = "/about"
   name = "About Us"
   weight = 20
-
-[[menu.main]]
-  url = "#contact"
-  name = "Contact"
-  weight = 30
 
 [[menu.footer]]
   url = "#"
