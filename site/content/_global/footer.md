@@ -9,7 +9,7 @@ menu_title = "Link Title"
 
 [asset]
   title = "Logo Title"
-  image = "logo.jpg"
+  image = "logo.png"
   text = "Logo Subtext"
   url = "#"
 +++

@@ -1,5 +1,5 @@
 +++
-title = "Syna Theme"
-date = "2017-09-07"
-description = "Open Source Theme from Okkur for your next project"
+title = "Bacchus"
+date = "2021-06-08"
+description = "An irreverent Discord bot"
 +++
