@@ -24,8 +24,8 @@ lastmod = ["lastmod", ":git", "date"]
      unsafe = true
 
 [params]
-  name = "Okkur Labs"
-  description = "An irreverent Discord bot for parties."
+  name = "Bacchus"
+  description = "An irreverent bot for Discord parties."
 
   [params.style]
     #background = "secondary"
@@ -103,11 +103,5 @@ lastmod = ["lastmod", ":git", "date"]
 [[menu.footer_social]]
   weight = 20
   name = "facebook"
-  pre = "fab fa-facebook-f"
-  url = "#"
-
-[[menu.footer_social]]
-  weight = 30
-  name = "linkedin"
-  pre = "fab fa-linkedin-in"
-  url = "#"
+  pre = "fab fa-github"
+  url = "https://github.com/ethanharstad/dionysus"

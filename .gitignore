@@ -1,5 +1,7 @@
 data/*
 
+*_gen*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

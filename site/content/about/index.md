@@ -1,4 +1,4 @@
 +++
-title = "About Syna"
-date = "2017-10-05"
+title = "About Bacchus"
+date = "2021-06-08"
 +++

@@ -7,7 +7,7 @@ background = "light" # can influence the text color
 particles = true
 
 title = "Bacchus Bot"
-subtitle = "An irreverent Discord bot"
+subtitle = "An irreverent bot for Discord parties"
 
 [header]
   image = "header.jpg"

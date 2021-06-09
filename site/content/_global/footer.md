@@ -16,6 +16,6 @@ menu_title = "Link Title"
 
 #### Description Title
 
-Project description such as:
-Open source theme for your next project
-Provided by Okkur Labs
+Project description such as
+Lorem ipsum sit dolor amet
+Blah blah blah
