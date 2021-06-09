@@ -43,7 +43,6 @@ async def on_ready():
     logger.info("We have logged in as {0.user}".format(bot))
 
 
-
 @bot.command(brief="Ping the bot [DEBUG]")
 async def ping(ctx: commands.Context):
     logger.info("got ping")

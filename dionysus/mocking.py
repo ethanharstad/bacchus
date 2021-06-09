@@ -24,11 +24,8 @@ class MockingCog(commands.Cog):
             else:
                 await self._random_taunt(message)
 
-        # See if any commands were in this message
-        await self.bot.process_commands(message)
-
     async def _random_taunt(self, message: discord.Message):
-        if random.randrange(10) != 0:
+        if random.randrange(100) != 0:
             return
         logger.info(f"Being a dick to {message.author.name}...")
         f = random.choice([self._spongebobify])
