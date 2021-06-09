@@ -170,7 +170,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         embed = discord.Embed(
             title="Cards Against Humanity",
             description="Chose the best answer for\n\n> {}".format(question),
-            color=0xFF0000,
+            color=COLOR,
         )
         for i, answer in enumerate(hand):
             embed.add_field(name=i, value=str(answer), inline=False)
