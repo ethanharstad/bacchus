@@ -1,0 +1,3 @@
+[submodule "sites/themes/syna"] 
+  path = sites/themes/syna
+  url = https://git.okkur.org/syna
