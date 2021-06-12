@@ -22,16 +22,30 @@ class MockingCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        # Don't bother replying to bots
         if not message.author.bot:
-            if await self._profanity(message):
-                return
-            if await self._hi_dad(message):
-                return
-            await self._random_taunt(message)
+            # Get the context so we can see if it contains a command
+            ctx: discord.commands.Context = await self.bot.get_context(message)
+            # Only be a dick if there are no commands
+            if ctx.valid is False:
+                # If any dickery happens, immediately return
+                # TODO solve this more elegantly
+                if await self._profanity(message):
+                    return
+                if await self._hi_dad(message):
+                    return
+                if await self._random_taunt(message):
+                    return
+                # If we weren't a dick, maybe they need help?
+                await self._needs_help(message)
+
+    async def _needs_help(self, message: discord.Message):
+        if self.bot.user.mentioned_in(message):
+            await message.reply(f"¯\_(ツ)_/¯ perhaps you want `{self.bot.command_prefix}help`?")
 
     async def _profanity(self, message: discord.Message) -> bool:
         if profanity.contains_profanity(message.content):
-            if random.randrange(10) == 0:
+            if random.randrange(5) == 0:
                 # TODO add more responses to profanity filter
                 reply = random.choice([
                     "Dirty, dirty boy!",

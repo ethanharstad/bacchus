@@ -62,6 +62,18 @@ async def complain(ctx: commands.Context, *args):
     await ctx.author.send(embed=embed)
     await owner.send(embed=embed)
 
+@bot.command(hidden=True)
+@commands.is_owner()
+async def say(ctx: commands.Context, channel: discord.TextChannel, *msg):
+    if ctx.message.channel.type == discord.ChannelType.text:
+            await ctx.message.delete()
+    await channel.send(" ".join(msg))
+
+@say.error
+async def say_error(ctx: commands.Context, error: commands.CommandError):
+    if isinstance(error, commands.ChannelNotFound):
+        await ctx.send("I couldn't resolve that channel.")
+
 
 bot.add_cog(ChanceCog(bot))
 bot.add_cog(MockingCog(bot))
