@@ -1,6 +1,6 @@
 +++
 title = "Cards Against Humanity"
-weight = 20
+weight = 10
 
 [asset]
   icon = "fas fa-users"

@@ -1,6 +1,6 @@
 +++
-title = "Ride The Bus"
-weight = 30
+title = "Ride the Bus"
+weight = 20
 
 [asset]
   icon = "fas fa-wine-glass"
