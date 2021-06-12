@@ -7,3 +7,4 @@ pillow~=8.2.0
 numpy~=1.20.3
 aiohttp~=3.7.4
 aiodns~=3.0.0
+better-profanity~=0.7.0
