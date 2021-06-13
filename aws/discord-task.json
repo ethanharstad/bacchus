@@ -19,22 +19,21 @@
             "command": null,
             "linuxParameters": null,
             "cpu": 512,
-            "environment": [
-                {
-                    "name": "DISCORD_TOKEN",
-                    "value": "${{ secrets.DISCORD_TOKEN }}"
-                },
-                {
-                    "name": "GIPHY_API_KEY",
-                    "value": "${{ secrets.GIPHY_API_KEY }}"
-                }
-            ],
             "resourceRequirements": null,
             "ulimits": null,
             "dnsServers": null,
             "mountPoints": [],
             "workingDirectory": null,
-            "secrets": null,
+            "secrets": [
+                {
+                    "valueFrom": "arn:aws:secretsmanager:us-east-2:794178667449:secret:prod/bacchus/discord-pcv5sP",
+                    "name": "DISCORD_TOKEN"
+                },
+                {
+                    "valueFrom": "arn:aws:secretsmanager:us-east-2:794178667449:secret:prod/bacchus/giphy-FzrRFe",
+                    "name": "GIPHY_API_KEY"
+                }
+            ],
             "dockerSecurityOptions": null,
             "memory": null,
             "memoryReservation": null,
@@ -63,70 +62,13 @@
     "placementConstraints": [],
     "memory": "1024",
     "taskRoleArn": null,
-    "compatibilities": [
-        "EC2",
-        "FARGATE"
-    ],
-    "taskDefinitionArn": "arn:aws:ecs:us-east-2:794178667449:task-definition/discord-task:2",
     "family": "discord-task",
-    "requiresAttributes": [
-        {
-            "targetId": null,
-            "targetType": null,
-            "value": null,
-            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
-        },
-        {
-            "targetId": null,
-            "targetType": null,
-            "value": null,
-            "name": "ecs.capability.execution-role-awslogs"
-        },
-        {
-            "targetId": null,
-            "targetType": null,
-            "value": null,
-            "name": "com.amazonaws.ecs.capability.ecr-auth"
-        },
-        {
-            "targetId": null,
-            "targetType": null,
-            "value": null,
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
-        },
-        {
-            "targetId": null,
-            "targetType": null,
-            "value": null,
-            "name": "ecs.capability.container-ordering"
-        },
-        {
-            "targetId": null,
-            "targetType": null,
-            "value": null,
-            "name": "ecs.capability.execution-role-ecr-pull"
-        },
-        {
-            "targetId": null,
-            "targetType": null,
-            "value": null,
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
-        },
-        {
-            "targetId": null,
-            "targetType": null,
-            "value": null,
-            "name": "ecs.capability.task-eni"
-        }
-    ],
     "pidMode": null,
     "requiresCompatibilities": [
         "FARGATE"
     ],
     "networkMode": "awsvpc",
     "cpu": "512",
-    "revision": 2,
-    "status": "ACTIVE",
     "inferenceAccelerators": null,
     "proxyConfiguration": null,
     "volumes": []
