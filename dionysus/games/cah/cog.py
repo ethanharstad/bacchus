@@ -26,9 +26,11 @@ class CardsAgainstHumanityCog(commands.Cog):
         self.players: Dict[int, str] = {}
         # Messages we need to watch for reactions on
         self.messages: Dict[discord.Messages, str] = {}
-    
+
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User) -> None:
+    async def on_reaction_add(
+        self, reaction: discord.Reaction, user: discord.User
+    ) -> None:
         if user.bot:
             return
         try:
@@ -36,12 +38,12 @@ class CardsAgainstHumanityCog(commands.Cog):
             game = self.games[key]["game"]
         except Exception as e:
             return
-        
+
         if reaction.emoji == "👍":
             await self._join(game, user)
         elif reaction.emoji == "✅":
             await self._start(game, user)
-    
+
     async def _join(self, game: CardsAgainstHumanity, user: discord.User) -> None:
         if game.add_player(Player(user.id, user.display_name)):
             message = self.games[game.key]["message"]
@@ -50,7 +52,7 @@ class CardsAgainstHumanityCog(commands.Cog):
             await message.reply(f"{user.mention} has joined the game")
         else:
             pass
-    
+
     async def _start(self, game: CardsAgainstHumanity, user: discord.User) -> None:
         message = self.games[game.key]["message"]
         if user.id not in self.players:
@@ -98,7 +100,9 @@ class CardsAgainstHumanityCog(commands.Cog):
         desc = "Fill in the blank using politically incorrect words or phrases."
         if len(game.players) > 0:
             desc += "\n\n**Players:**\n"
-            desc += "\n".join(self.bot.get_user(player_id).name for player_id in game.players.keys())
+            desc += "\n".join(
+                self.bot.get_user(player_id).name for player_id in game.players.keys()
+            )
         embed = discord.Embed(
             title="Cards Against Humanity",
             description=desc,
@@ -119,8 +123,10 @@ class CardsAgainstHumanityCog(commands.Cog):
             inline=True,
         )
         return embed
-    
-    def _build_hand_embed(self, game: CardsAgainstHumanity, player_id: int) -> discord.Embed:
+
+    def _build_hand_embed(
+        self, game: CardsAgainstHumanity, player_id: int
+    ) -> discord.Embed:
         judge: discord.User = self.bot.get_user(game.get_judge_id())
         player: Player = game.players[player_id]
 
