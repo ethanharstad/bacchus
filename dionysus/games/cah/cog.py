@@ -24,6 +24,67 @@ class CardsAgainstHumanityCog(commands.Cog):
         self.channels: Dict[int, str] = {}
         # Games keyed by player id
         self.players: Dict[int, str] = {}
+        # Messages we need to watch for reactions on
+        self.messages: Dict[discord.Messages, str] = {}
+    
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
+        if user.bot:
+            return
+        try:
+            key = self.messages[reaction.message]
+            game = self.games[key]["game"]
+        except Exception as e:
+            return
+        
+        if reaction.emoji == "👍":
+            await self._join(game, user)
+        elif reaction.emoji == "✅":
+            await self._start(game, user)
+    
+    async def _join(self, game: CardsAgainstHumanity, user: discord.User):
+        if game.add_player(Player(user.id, user.display_name)):
+            message = self.games[game.key]["message"]
+            await message.edit(embed=self._build_game_embed(game))
+            self.players[user.id] = game.key
+            await message.reply(f"{user.mention} has joined the game")
+        else:
+            pass
+    
+    async def _start(self, game: CardsAgainstHumanity, user: discord.User):
+        message = self.games[game.key]["message"]
+        if user.id not in self.players:
+            await user.send("You need to join a game before you can start it.")
+            return
+
+        key = self.players[user.id]
+        if key not in self.games:
+            await user.send(
+                "Something seems to have gone wrong. Try joining a new game."
+            )
+            return
+        ref = self.games[key]
+        game = ref["game"]
+
+        # The game requires you to be a member in order to start it
+        if user.id not in game.players:
+            await user.send(
+                "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because you haven't joined it.".format(
+                    game=game, guild=ref["guild"], channel=ref["channel"]
+                )
+            )
+            return
+        # The game requires at least 3 players
+        if len(game.players) < 3:
+            await user.send(
+                "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because it doesn't have enough players yet.".format(
+                    game=game, guild=ref["guild"], channel=ref["channel"]
+                )
+            )
+            return
+        await message.reply(f"Started by {user.display_name}!")
+        await asyncio.sleep(5)
+        await self._play_round(game)
 
     def _get_game_for_player(self, player_id: int) -> CardsAgainstHumanity:
         key = self.players[player_id]
@@ -116,6 +177,32 @@ class CardsAgainstHumanityCog(commands.Cog):
         )
         await ctx.send(embed=embed)
 
+    def _build_game_embed(self, game: CardsAgainstHumanity):
+        desc = "Fill in the blank using politically incorrect words or phrases."
+        if len(game.players) > 0:
+            desc += "\n\n**Players:**\n"
+            desc += "\n".join(self.bot.get_user(player_id).name for player_id in game.players.keys())
+        embed = discord.Embed(
+            title="Cards Against Humanity",
+            description=desc,
+            color=COLOR,
+        )
+        embed.add_field(
+            name="{prefix}cah join {key}".format(
+                prefix=self.bot.command_prefix, key=game.key
+            ),
+            value="or 👍 to join",
+            inline=True,
+        )
+        embed.add_field(
+            name="{prefix}cah start {key}".format(
+                prefix=self.bot.command_prefix, key=game.key
+            ),
+            value="or ✅ to start",
+            inline=True,
+        )
+        return embed
+
     @cah.command(brief="Create a game of Cards Against Humanity")
     async def create(self, ctx: commands.Context):
         user = ctx.author
@@ -135,33 +222,13 @@ class CardsAgainstHumanityCog(commands.Cog):
         }
         self.channels[ctx.channel.id] = game.key
 
-        embed = discord.Embed(
-            title="Cards Against Humanity",
-            description="Fill in the blank using politically incorrect words or phrases.",
-            color=COLOR,
-        )
-        embed.set_footer(
-            text="Game {game.key} created by {user.display_name}".format(
-                user=user, game=game
-            )
-        )
-        embed.add_field(
-            name="{prefix}cah join {key}".format(
-                prefix=self.bot.command_prefix, key=game.key
-            ),
-            value="to join",
-            inline=True,
-        )
-        embed.add_field(
-            name="{prefix}cah start {key}".format(
-                prefix=self.bot.command_prefix, key=game.key
-            ),
-            value="to start",
-            inline=True,
-        )
+        embed = self._build_game_embed(game)
 
-        await ctx.send(embed=embed)
-        return True
+        msg = await ctx.send(embed=embed)
+        self.messages[msg] = game.key
+        self.games[game.key]["message"] = msg
+        await msg.add_reaction("👍")
+        await msg.add_reaction("✅")
 
     @cah.command(hidden=True, brief="Deal a random Cards Against Humanity hand [DEBUG]")
     async def deal(self, ctx):
@@ -201,60 +268,12 @@ class CardsAgainstHumanityCog(commands.Cog):
             ref = self.games[key]
             game = ref["game"]
 
-        if game.add_player(Player(user.id, user.display_name)):
-            self.players[user.id] = game.key
-            await user.send(
-                "Thanks for joining Cards Against Humanity game {game.key} in {guild.name} {channel.mention}.\nIt will start shortly.".format(
-                    game=game, guild=ref["guild"], channel=ref["channel"]
-                )
-            )
-        else:
-            pass
+        await self._join(game, user)
 
     @cah.command(brief="Start a Cards Against Humanity game")
     async def start(self, ctx):
         user = ctx.author
-        if user.id not in self.players:
-            await ctx.message.reply("You need to join a game before you can start it.")
-            return
-
-        key = self.players[user.id]
-        if key not in self.games:
-            await ctx.message.reply(
-                "Something seems to have gone wrong. Try joining a new game."
-            )
-            return
-        ref = self.games[key]
-        game = ref["game"]
-
-        # The game requires you to be a member in order to start it
-        if user.id not in game.players:
-            await ctx.message.reply(
-                "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because you haven't joined it.".format(
-                    game=game, guild=ref["guild"], channel=ref["channel"]
-                )
-            )
-            return
-        # The game requires at least 3 players
-        if len(game.players) < 3:
-            await ctx.message.reply(
-                "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because it doesn't have enough players yet.".format(
-                    game=game, guild=ref["guild"], channel=ref["channel"]
-                )
-            )
-            return
-
-        # Start the game!
-        embed = discord.Embed(
-            title="Cards Against Humanity",
-            description=f"Started by {user.display_name}!",
-            color=COLOR,
-        )
-        embed.set_footer(text=f"Cards Against Humanity game {game.key}")
-        await ref["channel"].send(embed=embed)
-
-        await asyncio.sleep(5)
-        await self._play_round(game)
+        await self._start(game, user)
 
     @cah.command(brief="Stop a Cards Against Humanity game")
     async def stop(self, ctx):

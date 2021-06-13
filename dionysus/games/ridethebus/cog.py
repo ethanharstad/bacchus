@@ -75,7 +75,6 @@ class RideTheBusCog(commands.Cog):
         try:
             game = self.msg_refs[reaction.message]
         except:
-            logger.warning(f"Failed to get game for {reaction} by {user}")
             return
         # Validate the reaction
         if not self._validate_reaction(game, reaction, user):
