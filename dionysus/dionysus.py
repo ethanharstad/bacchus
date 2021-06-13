@@ -17,7 +17,7 @@ from mocking import MockingCog
 from games.cah.cog import CardsAgainstHumanityCog
 from games.ridethebus.cog import RideTheBusCog
 
-COMMAND_PREFIX = "?"
+COMMAND_PREFIX = os.environ.get("COMMAND_PREFIX", "?")
 
 logger = logging.getLogger(__name__)
 
