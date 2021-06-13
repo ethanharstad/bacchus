@@ -54,7 +54,7 @@ class GameState(IntEnum):
 # TODO speed mode
 # TODO Rando Cardrissian
 class CardsAgainstHumanity:
-    def __init__(self, cards_per_hand=8):
+    def __init__(self, cards_per_hand=8, round_limit=0, score_limit=5):
         self.key: str = petname.Generate(2, "-")
         self.cards_per_hand: int = cards_per_hand
         self.questions: Set[QuestionCard] = set()
@@ -62,6 +62,8 @@ class CardsAgainstHumanity:
         self.players: Dict[int, Player] = dict()
         self.play_order: List[int] = []
         self.round: int = 0
+        self.round_limit: int = round_limit
+        self.score_limit: int = score_limit
         self.judge_index: int = -1
         self.question: QuestionCard = None
         self.state: GameState = GameState.INIT
@@ -115,11 +117,14 @@ class CardsAgainstHumanity:
             if x not in values:
                 return x
 
-    def get_judge_id(self):
+    def get_judge_id(self) -> int:
         return self.play_order[self.judge_index]
 
-    def get_winner_id(self):
+    def get_winner_id(self) -> int:
         return self.winner.id
+
+    def get_leaderboard(self) -> List[Player]:
+        return sorted(self.players, key=lambda player: player.score, reverse=True)
 
     def draw_answer(self):
         a = CardsAgainstHumanity._draw(ANSWERS, self.answers)
@@ -211,6 +216,9 @@ class CardsAgainstHumanity:
         self.winner.score += 1
 
         self._finalize_round()
+        if self._check_end_state():
+            self.state = GameState.GAME_OVER
+
         return winner_id
 
     def _finalize_round(self):
@@ -220,3 +228,12 @@ class CardsAgainstHumanity:
         self.submission_mapping = []
         self.judge_index = (self.judge_index + 1) % len(self.play_order)
         self.state = GameState.ROUND_COMPLETE
+
+    def _check_end_state(self) -> bool:
+        if self.round_limit > 0:
+            return self.round >= self.round_limit
+        if self.score_limit > 0:
+            for player in self.players.values():
+                if player.score >= self.score_limit:
+                    return True
+        return False

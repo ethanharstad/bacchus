@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+from typing import Dict, List
 import discord
 from discord.ext import commands
 import emoji
@@ -19,18 +20,25 @@ class CardsAgainstHumanityCog(commands.Cog):
         self.bot = bot
         # Games keyed by game id
         self.games = {}
+        # Games keyed by channel id
+        self.channels: Dict[int, str] = {}
         # Games keyed by player id
-        self.players = {}
+        self.players: Dict[int, str] = {}
+
+    def _get_game_for_player(self, player_id: int) -> CardsAgainstHumanity:
+        key = self.players[player_id]
+        return self.games[key]["game"]
+
+    def _get_game_for_channel(self, channel_id: int) -> CardsAgainstHumanity:
+        key = self.channels[channel_id]
+        return self.games[key]["game"]
 
     def _build_hand_embed(self, game: CardsAgainstHumanity, player_id: int):
         judge: discord.User = self.bot.get_user(game.get_judge_id())
         player: Player = game.players[player_id]
 
-        q = "\n".join(["> " + s for s in game.question.split("\n")])
         prompt = f"Submit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`"
-        desc = (
-            f"Choose your best answer to:\n{q}\n{judge.name} will be judging.\n{prompt}"
-        )
+        desc = f"Choose your best answer to:\n{game.question.render()}\n{judge.name} will be judging.\n{prompt}"
         logger.info(f"Hand Desc: {desc}")
 
         embed = discord.Embed(
@@ -125,6 +133,7 @@ class CardsAgainstHumanityCog(commands.Cog):
             "channel": ctx.channel,
             "game": game,
         }
+        self.channels[ctx.channel.id] = game.key
 
         embed = discord.Embed(
             title="Cards Against Humanity",
@@ -161,7 +170,7 @@ class CardsAgainstHumanityCog(commands.Cog):
         embed = discord.Embed(
             title="Cards Against Humanity",
             description="Chose the best answer for\n\n> {}".format(question),
-            color=0xFF0000,
+            color=COLOR,
         )
         for i, answer in enumerate(hand):
             embed.add_field(name=i, value=str(answer), inline=False)
@@ -169,18 +178,28 @@ class CardsAgainstHumanityCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @cah.command(brief="Join an existing Cards Against Humanity game")
-    async def join(self, ctx, key: str):
-        if key not in self.games:
-            await ctx.message.reply("Sorry, that game key doesn't exist.")
-            return
+    async def join(self, ctx: commands.Context, key: str = None):
         user = ctx.author
-        if user.id in self.players:
-            await ctx.message.reply(
-                "You're alredy in a game, leave it first before joining this one."
-            )
-            return
-        ref = self.games[key]
-        game = ref["game"]
+        if key is None:
+            try:
+                game = self._get_game_for_channel(ctx.channel.id)
+                ref = self.games[game.key]
+            except:
+                await ctx.message.reply(
+                    "Sorry, you need to pass a game key or join from a channel."
+                )
+                return
+        else:
+            if key not in self.games:
+                await ctx.message.reply("Sorry, that game key doesn't exist.")
+                return
+            if user.id in self.players:
+                await ctx.message.reply(
+                    "You're alredy in a game, leave it first before joining this one."
+                )
+                return
+            ref = self.games[key]
+            game = ref["game"]
 
         if game.add_player(Player(user.id, user.display_name)):
             self.players[user.id] = game.key
@@ -210,32 +229,37 @@ class CardsAgainstHumanityCog(commands.Cog):
 
         # The game requires you to be a member in order to start it
         if user.id not in game.players:
-            await user.send(
+            await ctx.message.reply(
                 "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because you haven't joined it.".format(
                     game=game, guild=ref["guild"], channel=ref["channel"]
                 )
             )
-            return False
+            return
         # The game requires at least 3 players
         if len(game.players) < 3:
-            await user.send(
+            await ctx.message.reply(
                 "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because it doesn't have enough players yet.".format(
                     game=game, guild=ref["guild"], channel=ref["channel"]
                 )
             )
-            return False
+            return
 
         # Start the game!
         embed = discord.Embed(
             title="Cards Against Humanity",
-            description="Started by {user.display_name}!",
+            description=f"Started by {user.display_name}!",
             color=COLOR,
         )
-        embed.set_footer(
-            text="Cards Against Humanity game {game.key}".format(game=game)
-        )
+        embed.set_footer(text=f"Cards Against Humanity game {game.key}")
         await ref["channel"].send(embed=embed)
-        return True
+
+        await asyncio.sleep(5)
+        await self._play_round(game)
+
+    @cah.command(brief="Stop a Cards Against Humanity game")
+    async def stop(self, ctx):
+        # TODO stop the game
+        pass
 
     @cah.command(brief="Submit an answer to a round of Cards Against Humanity")
     async def submit(self, ctx, *args):
@@ -317,7 +341,7 @@ class CardsAgainstHumanityCog(commands.Cog):
             return
 
         game.choose_winner(answer_id - 1)
-        if game.state == GameState.ROUND_COMPLETE:
+        if game.state in [GameState.ROUND_COMPLETE, GameState.GAME_OVER]:
             channel = ref["channel"]
 
             winner_embed = self._build_winner_embed(game)
@@ -333,6 +357,29 @@ class CardsAgainstHumanityCog(commands.Cog):
                 user = self.bot.get_user(player_id)
                 await user.send(embed=score_embed)
 
+        if game.state == GameState.GAME_OVER:
+            # End the game
+            return
+
+        # Continue to the next round
+        await asyncio.sleep(5)
+        await self._play_round(game)
+
+    async def _play_round(self, game: CardsAgainstHumanity):
+        game.start_round()
+        for player_id in game.players:
+            user = self.bot.get_user(player_id)
+            if player_id == game.get_judge_id():
+                embed = discord.Embed(
+                    title="Cards Against Humanity",
+                    description=f"You will be judging the answers for\n> {game.question}",
+                    color=COLOR,
+                )
+                await user.send(embed=embed)
+                continue
+            hand = self._build_hand_embed(game, player_id)
+            await user.send(embed=hand)
+
     @cah.command(brief="Start a round of Cards Against Humanity [DEBUG]")
     async def debug(self, ctx):
         user = ctx.author
@@ -345,16 +392,4 @@ class CardsAgainstHumanityCog(commands.Cog):
         ref = self.games[key]
         game = ref["game"]
 
-        game.start_round()
-        for player_id in game.players:
-            user = self.bot.get_user(player_id)
-            if player_id == game.get_judge_id():
-                embed = discord.Embed(
-                    title="Cards Against Humanity",
-                    description=f"You will be judging the answers fo\n> {game.question}",
-                    color=COLOR,
-                )
-                await user.send(embed=embed)
-                continue
-            hand = self._build_hand_embed(game, player_id)
-            await user.send(embed=hand)
+        await self._play_round(game)
