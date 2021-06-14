@@ -11,9 +11,9 @@ from .game import CardsAgainstHumanity, GameState, Player, ANSWERS, QUESTIONS
 logger = logging.getLogger(__name__)
 
 COLOR = 0x00FFFF
+MIN_PLAYERS = 3
 
-
-class CardsAgainstHumanityCog(commands.Cog):
+class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
     def __init__(self, bot: commands.Bot):
         super().__init__()
         # A reference to the bot client
@@ -77,7 +77,7 @@ class CardsAgainstHumanityCog(commands.Cog):
             )
             return
         # The game requires at least 3 players
-        if len(game.players) < 3:
+        if len(game.players) < MIN_PLAYERS:
             await user.send(
                 "You cannot start the Cards Against Humanity game {game.key} in {guild.name} {channel.mention} because it doesn't have enough players yet.".format(
                     game=game, guild=ref["guild"], channel=ref["channel"]
@@ -115,13 +115,14 @@ class CardsAgainstHumanityCog(commands.Cog):
             value="or 👍 to join",
             inline=True,
         )
-        embed.add_field(
-            name="{prefix}cah start {key}".format(
-                prefix=self.bot.command_prefix, key=game.key
-            ),
-            value="or ✅ to start",
-            inline=True,
-        )
+        if len(game.players) >= MIN_PLAYERS:
+            embed.add_field(
+                name="{prefix}cah start {key}".format(
+                    prefix=self.bot.command_prefix, key=game.key
+                ),
+                value="or ✅ to start",
+                inline=True,
+            )
         return embed
 
     def _build_hand_embed(
