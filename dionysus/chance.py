@@ -140,5 +140,5 @@ class ChanceCog(commands.Cog):
             # Something went wrong
             logger.exception("OOPS")
             await ctx.send(
-                f"Fuck you {ctx.author.display_name}, Leave me alone. I'm broken..."
+                f"Sorry {ctx.author.display_name}, Giphy cried from your fortune..."
             )
