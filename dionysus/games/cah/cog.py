@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 COLOR = 0x00FFFF
 MIN_PLAYERS = 3
 
+
 class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
     def __init__(self, bot: commands.Bot):
         super().__init__()
@@ -40,9 +41,27 @@ class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
             return
 
         if reaction.emoji == "👍":
-            await self._join(game, user)
+            successful = await self._join(game, user)
         elif reaction.emoji == "✅":
-            await self._start(game, user)
+            successful = await self._start(game, user)
+
+        if not successful:
+            await reaction.message.remove_reaction(reaction.emoji, user)
+
+    @commands.Cog.listener()
+    async def on_reaction_remove(
+        self, reaction: discord.Reaction, user: discord.User
+    ) -> None:
+        if user.bot:
+            return
+        try:
+            key = self.messages[reaction.message]
+            game = self.games[key]["game"]
+        except Exception as e:
+            return
+
+        if reaction.emoji == "👍":
+            await self._leave(game, user)
 
     async def _join(self, game: CardsAgainstHumanity, user: discord.User) -> None:
         if game.add_player(Player(user.id, user.display_name)):
@@ -50,8 +69,17 @@ class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
             await message.edit(embed=self._build_game_embed(game))
             self.players[user.id] = game.key
             await message.reply(f"{user.mention} has joined the game")
-        else:
-            pass
+            return True
+        return False
+
+    async def _leave(self, game: CardsAgainstHumanity, user: discord.User) -> None:
+        if game.remove_player(Player(user.id, user.display_name)):
+            message = self.games[game.key]["message"]
+            await message.edit(embed=self._build_game_embed(game))
+            self.players[user.id] = game.key
+            await message.reply(f"{user.mention} has left the game")
+            return True
+        return False
 
     async def _start(self, game: CardsAgainstHumanity, user: discord.User) -> None:
         message = self.games[game.key]["message"]
@@ -219,7 +247,13 @@ class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
                     user=user
                 )
             )
-            return False
+            return
+
+        if ctx.channel.id in self.channels:
+            await ctx.reply(
+                f"There's already a Cards Against Humanity Game here. Trying joining or stopping {self.channels[ctx.channel.id]}."
+            )
+            return
 
         game = CardsAgainstHumanity()
         self.games[game.key] = {
@@ -276,6 +310,32 @@ class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
             game = ref["game"]
 
         await self._join(game, user)
+
+    @cah.command(brief="Leave your current Cards Against Humanity game")
+    async def leave(self, ctx: commands.Context, key: str = None) -> None:
+        user = ctx.author
+        if key is None:
+            try:
+                game = self._get_game_for_channel(ctx.channel.id)
+                ref = self.games[game.key]
+            except:
+                await ctx.message.reply(
+                    "Sorry, you need to pass a game key or join from a channel."
+                )
+                return
+        else:
+            if key not in self.games:
+                await ctx.message.reply("Sorry, that game key doesn't exist.")
+                return
+            if user.id in self.players:
+                await ctx.message.reply(
+                    "You're alredy in a game, leave it first before joining this one."
+                )
+                return
+            ref = self.games[key]
+            game = ref["game"]
+
+        await self._leave(game, user)
 
     @cah.command(brief="Start a Cards Against Humanity game")
     async def start(self, ctx: commands.Context) -> None:

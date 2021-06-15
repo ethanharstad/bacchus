@@ -112,6 +112,9 @@ class CardsAgainstHumanity:
         logger.info("Play Order: {}".format(self.play_order))
         return True
 
+    def stop(self):
+        pass
+
     @staticmethod
     def _draw(pool: Iterable[T], values: Iterable[T]) -> T:
         while True:
@@ -142,6 +145,7 @@ class CardsAgainstHumanity:
 
     def start_round(self) -> QuestionCard:
         self.round += 1
+        self.judge_index = (self.judge_index + 1) % len(self.play_order)
         logger.info(f"Starting round {self.round}")
         logger.info(f"Player {self.get_judge_id} is judge")
         # Draw the question
@@ -228,7 +232,6 @@ class CardsAgainstHumanity:
             raise ValueError("The game is not ready for finalizing.")
 
         self.submission_mapping = []
-        self.judge_index = (self.judge_index + 1) % len(self.play_order)
         self.state = GameState.ROUND_COMPLETE
 
     def _check_end_state(self) -> bool:
