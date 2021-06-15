@@ -280,6 +280,18 @@ class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
     @cah.command(brief="Start a Cards Against Humanity game")
     async def start(self, ctx: commands.Context) -> None:
         user = ctx.author
+        if user.id not in self.players:
+            await user.send("You need to join a game before you can start it.")
+            return
+
+        key = self.players[user.id]
+        if key not in self.games:
+            await user.send(
+                "Something seems to have gone wrong. Try joining a new game."
+            )
+            return
+        ref = self.games[key]
+        game = ref["game"]
         await self._start(game, user)
 
     @cah.command(brief="Stop a Cards Against Humanity game")
