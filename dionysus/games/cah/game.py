@@ -19,8 +19,7 @@ T = TypeVar("T")
 
 NUM_JUDGES = 1
 GAME_DATA_PATHS = [
-    # "data/games/cah/cah-cards-compact.json",
-    "data/games/cah/test.json",
+    "data/games/cah/cah-cards-compact.json",
 ]
 
 QUESTIONS = []
