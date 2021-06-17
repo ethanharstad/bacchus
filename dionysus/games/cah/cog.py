@@ -160,9 +160,7 @@ class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
         player: Player = game.players[player_id]
 
         prompt = f"Submit your answer with `{self.bot.command_prefix}cah submit {' '.join('[id]' for i in range(game.question.pick))}`"
-        desc = f"Choose your best answer to:\n{game.question.render()}\n{judge.name} will be judging.\n{prompt}"
-        logger.info(f"Hand Desc: {desc}")
-
+        desc = f"Choose your best answer to:\n>>> {game.question.render()}\n\n\n{judge.name} will be judging.\n{prompt}"
         embed = discord.Embed(
             title="Cards Against Humanity",
             description=desc,
@@ -175,9 +173,10 @@ class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
         return embed
 
     def _build_judge_embed(self, game: CardsAgainstHumanity) -> discord.Embed:
+        desc = f"Choose the best answer to:\n>>> {game.question}\n\nSelect the winner with `{self.bot.command_prefix}cah choose [id]`"
         embed = discord.Embed(
             title="Cards Against Humanity",
-            description=f"Choose the best answer to:\n{game.question}\nSelect the winner with `{self.bot.command_prefix}cah choose [id]`",
+            description=desc,
             color=COLOR,
         )
         for i, submission_id in enumerate(game.submission_mapping):
@@ -468,9 +467,10 @@ class CardsAgainstHumanityCog(commands.Cog, name="Cards Against Humanity"):
         for player_id in game.players:
             user = self.bot.get_user(player_id)
             if player_id == game.get_judge_id():
+                desc = f"You will be judging the answers for\n>>> {game.question}"
                 embed = discord.Embed(
                     title="Cards Against Humanity",
-                    description=f"You will be judging the answers for\n> {game.question}",
+                    description=desc,
                     color=COLOR,
                 )
                 await user.send(embed=embed)
