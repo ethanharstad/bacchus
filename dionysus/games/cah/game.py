@@ -3,7 +3,7 @@ import re
 import logging
 import json
 from enum import IntEnum
-from typing import Iterable, Dict, Set, List
+from typing import Iterable, Dict, Set, List, TypeVar
 
 from discord.activity import Game
 
@@ -14,6 +14,8 @@ from .question_card import QuestionCard
 from .player import Player
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 NUM_JUDGES = 1
 GAME_DATA_PATHS = [
@@ -71,7 +73,7 @@ class CardsAgainstHumanity:
         self.submission_mapping: List[int] = []
         self.winner: Player = None
 
-    def add_player(self, player: Player):
+    def add_player(self, player: Player) -> bool:
         logger.info(
             f"Player {player.id}:{player.name} is attempting to join game {self.key}"
         )
@@ -95,7 +97,7 @@ class CardsAgainstHumanity:
         logger.info("Play Order: {}".format(self.play_order))
         return True
 
-    def remove_player(self, player: Player):
+    def remove_player(self, player: Player) -> bool:
         logger.info(f"Attempting to remove player {player.id}:{player.name}")
         # Can't remove a player that doesn't exist
         if player.id not in self.players:
@@ -110,8 +112,11 @@ class CardsAgainstHumanity:
         logger.info("Play Order: {}".format(self.play_order))
         return True
 
+    def stop(self):
+        pass
+
     @staticmethod
-    def _draw(pool: Iterable, values: Iterable):
+    def _draw(pool: Iterable[T], values: Iterable[T]) -> T:
         while True:
             x = random.choice(pool)
             if x not in values:
@@ -126,20 +131,21 @@ class CardsAgainstHumanity:
     def get_leaderboard(self) -> List[Player]:
         return sorted(self.players, key=lambda player: player.score, reverse=True)
 
-    def draw_answer(self):
+    def draw_answer(self) -> AnswerCard:
         a = CardsAgainstHumanity._draw(ANSWERS, self.answers)
         self.answers.add(a)
         logger.info("Drew Answer: {}".format(a))
         return a
 
-    def draw_question(self):
+    def draw_question(self) -> QuestionCard:
         q = CardsAgainstHumanity._draw(QUESTIONS, self.questions)
         self.questions.add(q)
         logger.info("Drew Question: {}".format(q))
         return q
 
-    def start_round(self):
+    def start_round(self) -> QuestionCard:
         self.round += 1
+        self.judge_index = (self.judge_index + 1) % len(self.play_order)
         logger.info(f"Starting round {self.round}")
         logger.info(f"Player {self.get_judge_id} is judge")
         # Draw the question
@@ -153,13 +159,13 @@ class CardsAgainstHumanity:
         self.state = GameState.WAITING_FOR_ANSWERS
         return self.question
 
-    def _fill_hands(self):
+    def _fill_hands(self) -> None:
         for player in self.players.values():
             logger.info(f"Filling player {player.id}:{player.name} hand")
             while len(player.hand) < self.cards_per_hand:
                 player.hand.append(self.draw_answer())
 
-    def submit_answer(self, player: Player, answers: list):
+    def submit_answer(self, player: Player, answers: List[AnswerCard]) -> None:
         logger.info(f"Player {player.id}:{player.name} attempting to submit {answers}")
         # Can't submit if you aren't a player
         if player.id not in self.players:
@@ -190,12 +196,12 @@ class CardsAgainstHumanity:
             # Close out submissions
             self.finalize_answers()
 
-    def _check_answers(self):
+    def _check_answers(self) -> bool:
         remaining_players = (len(self.players) - NUM_JUDGES) - len(self.submissions)
         logger.info(f"Still waiting on {remaining_players} players.")
         return remaining_players <= 0
 
-    def finalize_answers(self):
+    def finalize_answers(self) -> None:
         # Remove submitted cards from players' hands
         for player_id, answer in self.submissions.items():
             # Player might not be real if random submission enabled
@@ -207,7 +213,7 @@ class CardsAgainstHumanity:
         self.state = GameState.WAITING_FOR_JUDGE
         logger.info(f"Answers finalized for round {self.round}.")
 
-    def choose_winner(self, submission_id: int):
+    def choose_winner(self, submission_id: int) -> int:
         if self.state != GameState.WAITING_FOR_JUDGE:
             raise ValueError("The game is not ready for judging.")
 
@@ -221,12 +227,11 @@ class CardsAgainstHumanity:
 
         return winner_id
 
-    def _finalize_round(self):
+    def _finalize_round(self) -> None:
         if self.state != GameState.WAITING_FOR_JUDGE:
             raise ValueError("The game is not ready for finalizing.")
 
         self.submission_mapping = []
-        self.judge_index = (self.judge_index + 1) % len(self.play_order)
         self.state = GameState.ROUND_COMPLETE
 
     def _check_end_state(self) -> bool:

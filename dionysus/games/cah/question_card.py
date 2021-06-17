@@ -46,7 +46,7 @@ class QuestionCard:
         else:
             s = self.text
             if has_answers:
-                s += "\n> " + "\n> ".join(answers)
+                s += "\n" + "\n".join(answers)
         if has_answers == False and self.pick > 1:
             s += " (Pick {})".format(self.pick)
         return s
