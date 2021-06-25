@@ -67,7 +67,7 @@ class CardsAgainstHumanityCog(commands.Cog, name=TITLE):
         if reaction.emoji == JOIN_EMOJI:
             await self._leave(game, user)
 
-    async def _join(self, game: CardsAgainstHumanity, user: discord.User) -> None:
+    async def _join(self, game: CardsAgainstHumanity, user: discord.User) -> bool:
         if game.add_player(Player(user.id, user.display_name)):
             message = self.games[game.key]["message"]
             await message.edit(embed=self._build_game_embed(game))
@@ -76,7 +76,7 @@ class CardsAgainstHumanityCog(commands.Cog, name=TITLE):
             return True
         return False
 
-    async def _leave(self, game: CardsAgainstHumanity, user: discord.User) -> None:
+    async def _leave(self, game: CardsAgainstHumanity, user: discord.User) -> bool:
         if game.remove_player(Player(user.id, user.display_name)):
             message = self.games[game.key]["message"]
             await message.edit(embed=self._build_game_embed(game))
@@ -85,18 +85,18 @@ class CardsAgainstHumanityCog(commands.Cog, name=TITLE):
             return True
         return False
 
-    async def _start(self, game: CardsAgainstHumanity, user: discord.User) -> None:
+    async def _start(self, game: CardsAgainstHumanity, user: discord.User) -> bool:
         message = self.games[game.key]["message"]
         if user.id not in self.players:
             await user.send("You need to join a game before you can start it.")
-            return
+            return False
 
         key = self.players[user.id]
         if key not in self.games:
             await user.send(
                 "Something seems to have gone wrong. Try joining a new game."
             )
-            return
+            return False
         ref = self.games[key]
         game = ref["game"]
 
@@ -107,7 +107,7 @@ class CardsAgainstHumanityCog(commands.Cog, name=TITLE):
                     game=game, guild=ref["guild"], channel=ref["channel"]
                 )
             )
-            return
+            return False
         # The game requires at least 3 players
         if len(game.players) < MIN_PLAYERS:
             await user.send(
@@ -115,10 +115,11 @@ class CardsAgainstHumanityCog(commands.Cog, name=TITLE):
                     game=game, guild=ref["guild"], channel=ref["channel"]
                 )
             )
-            return
+            return False
         await message.reply(f"Started by {user.display_name}!")
         await asyncio.sleep(5)
         await self._play_round(game)
+        return True
     
     async def _stop(self, game: CardsAgainstHumanity, user: discord.User) -> bool:
         return False
