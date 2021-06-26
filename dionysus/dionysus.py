@@ -14,6 +14,7 @@ import emoji
 
 from chance import ChanceCog
 from mocking import MockingCog
+from channels.cog import ChannelsCog
 from games.cah.cog import CardsAgainstHumanityCog
 from games.ridethebus.cog import RideTheBusCog
 
@@ -76,6 +77,7 @@ async def say_error(ctx: commands.Context, error: commands.CommandError):
 
 
 bot.add_cog(ChanceCog(bot))
+bot.add_cog(ChannelsCog(bot))
 bot.add_cog(MockingCog(bot))
 bot.add_cog(CardsAgainstHumanityCog(bot))
 bot.add_cog(RideTheBusCog(bot))
