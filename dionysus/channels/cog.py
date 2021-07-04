@@ -15,9 +15,6 @@ class ChannelsCog(commands.Cog, name="Channels"):
     def __init__(self, bot: commands.Bot):
         super().__init__()
         self.bot: commands.Bot = bot
-        self.registered_channels: Dict[str, TempChannel] = {}
-        self.text_channels: Dict[discord.TextChannel, TempChannel] = {}
-        self.voice_channels: Dict[discord.VoiceChannel, TempChannel] = {}
 
     @commands.group(brief="Temporary Channel Management")
     async def channels(self, ctx: commands.Context) -> None:
@@ -51,7 +48,6 @@ class ChannelsCog(commands.Cog, name="Channels"):
         category = discord.utils.get(ctx.guild.channels, name="temp-channels")
         channel = TempChannel(self.bot, name=name, voice=type.lower() == "voice")
         await channel.setup(category)
-        self._register_channel(channel)
 
     @create.error
     async def create_error(self, ctx: commands.Context, error: commands.CommandError):
@@ -64,12 +60,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         if channel is None:
             return
 
-        if channel.text_channel:
-            await channel.text_channel.delete()
-        if channel.voice_channel:
-            await channel.voice_channel.delete()
-        self._unregister_channel(channel)
-        del channel
+        await channel.delete()
 
     @channels.command()
     async def claim(self, ctx: commands.Context, name: str = None) -> None:
@@ -114,13 +105,27 @@ class ChannelsCog(commands.Cog, name="Channels"):
     ) -> None:
         pass
 
+    @channels.command()
+    async def limit(
+        self, ctx: commands.Context, channel: Optional[TempChannel], limit: int
+    ) -> None:
+        logger.info(f"Got limit command for {channel.name}")
+
+    @channels.command()
+    async def archive(self, ctx: commands.Context, name: Optional[str]) -> None:
+        pass
+
+    @channels.command()
+    async def unarchive(self, ctx: commands.Context, name: Optional[str]) -> None:
+        pass
+
     async def _get_channel(self, ctx: commands.Context, name: str) -> TempChannel:
         channel = None
         try:
             if name is not None:
-                channel = self.registered_channels[name]
+                channel = TempChannel.by_name(name)
             else:
-                channel = self.text_channels[ctx.channel]
+                channel = TempChannel.by_text_channel(ctx.channel)
         except:
             if name is not None:
                 await ctx.reply(f"Could not find a channel named {name}.")
@@ -132,17 +137,3 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
     def _is_owner(self, ctx: commands.Context, channel: TempChannel) -> bool:
         return ctx.author == channel.owner
-
-    def _register_channel(self, channel: TempChannel) -> None:
-        self.registered_channels[channel.name] = channel
-        if channel.text_channel:
-            self.text_channels[channel.text_channel] = channel
-        if channel.voice_channel:
-            self.voice_channels[channel.voice_channel] = channel
-
-    def _unregister_channel(self, channel: TempChannel) -> None:
-        self.registered_channels.pop(channel.name, None)
-        if channel.text_channel:
-            self.text_channels.pop(channel.text_channel, None)
-        if channel.voice_channel:
-            self.voice_channels.pop(channel.voice_channel, None)
