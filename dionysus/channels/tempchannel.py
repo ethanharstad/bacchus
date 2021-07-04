@@ -104,6 +104,8 @@ class TempChannel:
 
     @limit.setter
     def limit(self, value: int):
+        if value < 0:
+            raise ValueError("Limit must be greater than or equal to 0")
         if value != self._limit:
             self._limit = value
             self.bot.loop.create_task(self._update_management_message())
@@ -126,7 +128,8 @@ class TempChannel:
     def _build_management_embed(self):
         description = (
             f"Owner: {self.owner.mention if self.owner else 'None'}\n"
-            f"Status: {self.LOCKED if self._locked else self.UNLOCKED} {self.VISIBLE if self._visible else self.HIDDEN}"
+            f"Status: {self.LOCKED if self._locked else self.UNLOCKED} {self.VISIBLE if self._visible else self.HIDDEN}\n"
+            f"Limit: {self._limit if self._limit > 0 else 'Unlimited'}"
         )
         embed = discord.Embed(
             color=self.COLOR,

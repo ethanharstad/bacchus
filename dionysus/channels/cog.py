@@ -55,35 +55,31 @@ class ChannelsCog(commands.Cog, name="Channels"):
         await ctx.send_help(ctx.command)
 
     @channels.command()
-    async def delete(self, ctx: commands.Context, name: str = None) -> None:
-        channel = await self._get_channel(ctx, name)
+    async def delete(self, ctx: commands.Context, channel: Optional[TempChannel]) -> None:
         if channel is None:
-            return
+            channel = TempChannel.by_text_channel(ctx.channel)
 
         await channel.delete()
 
     @channels.command()
-    async def claim(self, ctx: commands.Context, name: str = None) -> None:
-        channel = await self._get_channel(ctx, name)
+    async def claim(self, ctx: commands.Context, channel: Optional[TempChannel]) -> None:
         if channel is None:
-            return
+            channel = TempChannel.by_text_channel(ctx.channel)
         channel.owner = ctx.author
 
     @channels.command()
-    async def lock(self, ctx: commands.Context, name: str = None) -> None:
-        channel = await self._get_channel(ctx, name)
+    async def lock(self, ctx: commands.Context, channel: Optional[TempChannel]) -> None:
         if channel is None:
-            return
+            channel = TempChannel.by_text_channel(ctx.channel)
         if not self._is_owner(ctx, channel):
             await ctx.reply("Sorry, you need to be the channel owner.")
             return
         channel.locked = True
 
     @channels.command()
-    async def unlock(self, ctx: commands.Context, name: str = None) -> None:
-        channel = await self._get_channel(ctx, name)
+    async def unlock(self, ctx: commands.Context, channel: Optional[TempChannel]) -> None:
         if channel is None:
-            return
+            channel = TempChannel.by_text_channel(ctx.channel)
         if not self._is_owner(ctx, channel):
             await ctx.reply("Sorry, you need to be the channel owner.")
             return
@@ -91,8 +87,10 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
     @channels.command()
     async def allow(
-        self, ctx: commands.Context, who: Union[discord.Role, discord.User]
+        self, ctx: commands.Context, channel: Optional[TempChannel], who: Union[discord.Role, discord.User]
     ) -> None:
+        if channel is None:
+            channel = TempChannel.by_text_channel(ctx.channel)
         if isinstance(who, discord.Role):
             t = "Role"
         elif isinstance(who, discord.User):
@@ -101,39 +99,27 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
     @channels.command()
     async def deny(
-        self, ctx: commands.Context, who: Union[discord.Role, discord.User]
+        self, ctx: commands.Context, channel: Optional[TempChannel], who: Union[discord.Role, discord.User]
     ) -> None:
+        if channel is None:
+            channel = TempChannel.by_text_channel(ctx.channel)
         pass
 
     @channels.command()
     async def limit(
         self, ctx: commands.Context, channel: Optional[TempChannel], limit: int
     ) -> None:
-        logger.info(f"Got limit command for {channel.name}")
+        if channel is None:
+            channel = TempChannel.by_text_channel(ctx.channel)
+        channel.limit = limit
 
-    @channels.command()
-    async def archive(self, ctx: commands.Context, name: Optional[str]) -> None:
-        pass
+    # @channels.command()
+    # async def archive(self, ctx: commands.Context, name: Optional[str]) -> None:
+    #     pass
 
-    @channels.command()
-    async def unarchive(self, ctx: commands.Context, name: Optional[str]) -> None:
-        pass
-
-    async def _get_channel(self, ctx: commands.Context, name: str) -> TempChannel:
-        channel = None
-        try:
-            if name is not None:
-                channel = TempChannel.by_name(name)
-            else:
-                channel = TempChannel.by_text_channel(ctx.channel)
-        except:
-            if name is not None:
-                await ctx.reply(f"Could not find a channel named {name}.")
-            else:
-                await ctx.reply(
-                    "Please pass a channel name or run the command from the channel you want to close."
-                )
-        return channel
+    # @channels.command()
+    # async def unarchive(self, ctx: commands.Context, name: Optional[str]) -> None:
+    #     pass
 
     def _is_owner(self, ctx: commands.Context, channel: TempChannel) -> bool:
         return ctx.author == channel.owner
