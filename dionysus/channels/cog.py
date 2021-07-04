@@ -55,14 +55,18 @@ class ChannelsCog(commands.Cog, name="Channels"):
         await ctx.send_help(ctx.command)
 
     @channels.command()
-    async def delete(self, ctx: commands.Context, channel: Optional[TempChannel]) -> None:
+    async def delete(
+        self, ctx: commands.Context, channel: Optional[TempChannel]
+    ) -> None:
         if channel is None:
             channel = TempChannel.by_text_channel(ctx.channel)
 
         await channel.delete()
 
     @channels.command()
-    async def claim(self, ctx: commands.Context, channel: Optional[TempChannel]) -> None:
+    async def claim(
+        self, ctx: commands.Context, channel: Optional[TempChannel]
+    ) -> None:
         if channel is None:
             channel = TempChannel.by_text_channel(ctx.channel)
         channel.owner = ctx.author
@@ -77,7 +81,9 @@ class ChannelsCog(commands.Cog, name="Channels"):
         channel.locked = True
 
     @channels.command()
-    async def unlock(self, ctx: commands.Context, channel: Optional[TempChannel]) -> None:
+    async def unlock(
+        self, ctx: commands.Context, channel: Optional[TempChannel]
+    ) -> None:
         if channel is None:
             channel = TempChannel.by_text_channel(ctx.channel)
         if not self._is_owner(ctx, channel):
@@ -86,8 +92,33 @@ class ChannelsCog(commands.Cog, name="Channels"):
         channel.locked = False
 
     @channels.command()
+    async def ghost(
+        self, ctx: commands.Context, channel: Optional[TempChannel]
+    ) -> None:
+        if channel is None:
+            channel = TempChannel.by_text_channel(ctx.channel)
+        if not self._is_owner(ctx, channel):
+            await ctx.reply("Sorry, you need to be the channel owner.")
+            return
+        channel.visible = False
+
+    @channels.command()
+    async def unghost(
+        self, ctx: commands.Context, channel: Optional[TempChannel]
+    ) -> None:
+        if channel is None:
+            channel = TempChannel.by_text_channel(ctx.channel)
+        if not self._is_owner(ctx, channel):
+            await ctx.reply("Sorry, you need to be the channel owner.")
+            return
+        channel.visible = True
+
+    @channels.command()
     async def allow(
-        self, ctx: commands.Context, channel: Optional[TempChannel], who: Union[discord.Role, discord.User]
+        self,
+        ctx: commands.Context,
+        channel: Optional[TempChannel],
+        who: Union[discord.Role, discord.User],
     ) -> None:
         if channel is None:
             channel = TempChannel.by_text_channel(ctx.channel)
@@ -99,7 +130,10 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
     @channels.command()
     async def deny(
-        self, ctx: commands.Context, channel: Optional[TempChannel], who: Union[discord.Role, discord.User]
+        self,
+        ctx: commands.Context,
+        channel: Optional[TempChannel],
+        who: Union[discord.Role, discord.User],
     ) -> None:
         if channel is None:
             channel = TempChannel.by_text_channel(ctx.channel)
