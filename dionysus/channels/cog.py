@@ -48,6 +48,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         category = discord.utils.get(ctx.guild.channels, name="temp-channels")
         channel = TempChannel(self.bot, name=name, voice=type.lower() == "voice")
         await channel.setup(category)
+        channel.owner = ctx.author
 
     @create.error
     async def create_error(self, ctx: commands.Context, error: commands.CommandError):
@@ -118,26 +119,22 @@ class ChannelsCog(commands.Cog, name="Channels"):
         self,
         ctx: commands.Context,
         channel: Optional[TempChannel],
-        who: Union[discord.Role, discord.User],
+        who: Union[discord.User, discord.Role],
     ) -> None:
         if channel is None:
             channel = TempChannel.by_text_channel(ctx.channel)
-        if isinstance(who, discord.Role):
-            t = "Role"
-        elif isinstance(who, discord.User):
-            t = "User"
-        await ctx.reply(f"Allowing {t} {who.mention}")
+        channel.allow(who)
 
     @channels.command()
     async def deny(
         self,
         ctx: commands.Context,
         channel: Optional[TempChannel],
-        who: Union[discord.Role, discord.User],
+        who: discord.User,
     ) -> None:
         if channel is None:
             channel = TempChannel.by_text_channel(ctx.channel)
-        pass
+        channel.deny(who)
 
     @channels.command()
     async def limit(
@@ -157,3 +154,22 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
     def _is_owner(self, ctx: commands.Context, channel: TempChannel) -> bool:
         return ctx.author == channel.owner
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ) -> None:
+        logger.info(f"User: {member.name}\nBefore: {before}\nAfter: {after}")
+        # Is this user in a channel
+        if after.channel is None:
+            return
+        channel = TempChannel.by_voice_channel(after.channel)
+        if channel is None:
+            return
+        # Has the channel changed
+        if after.channel is not before.channel:
+            if not channel.validate_user(member):
+                await member.move_to(None, reason="Not authorized to join this channel")

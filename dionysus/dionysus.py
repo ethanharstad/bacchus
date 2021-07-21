@@ -32,6 +32,7 @@ intents = discord.Intents(
     members=True,
     messages=True,
     reactions=True,
+    voice_states=True,
 )
 # Configure discord bot
 bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents, activity=activity)
@@ -63,12 +64,14 @@ async def complain(ctx: commands.Context, *args):
     await ctx.author.send(embed=embed)
     await owner.send(embed=embed)
 
+
 @bot.command(hidden=True)
 @commands.is_owner()
 async def say(ctx: commands.Context, channel: discord.TextChannel, *msg):
     if ctx.message.channel.type == discord.ChannelType.text:
-            await ctx.message.delete()
+        await ctx.message.delete()
     await channel.send(" ".join(msg))
+
 
 @say.error
 async def say_error(ctx: commands.Context, error: commands.CommandError):
