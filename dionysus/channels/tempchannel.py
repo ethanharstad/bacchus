@@ -149,6 +149,7 @@ class TempChannel:
             logger.info(f"Denying User {target} in {self.name}")
             self._denys.add(target)
             self._allowed_users.discard(target)
+            self.validate_users()
             self.bot.loop.create_task(self._update_management_message())
 
     def validate_user(self, user: discord.User) -> bool:
@@ -169,23 +170,44 @@ class TempChannel:
 
         return False
 
+    def validate_users(self) -> None:
+        logger.info(f"Validating all users in {self.name}")
+        if self.voice_channel:
+            for member in self.voice_channel.members:
+                if not self.validate_user(member):
+                    self.bot.loop.create_task(
+                        member.move_to(
+                            None, reason="Not authorized to be in this channel."
+                        )
+                    )
+
     def _build_management_embed(self):
         description = (
             f"Owner: {self.owner.mention if self.owner else 'None'}\n"
             f"Status: {self.LOCKED if self._locked else self.UNLOCKED} {self.VISIBLE if self._visible else self.HIDDEN}\n"
             f"Limit: {self._limit if self._limit > 0 else 'Unlimited'}\n"
-            "Allowed:\n"
-            f"{chr(10).join(map(lambda x: x.mention,self._allowed_roles))}"
-            f"{chr(10) if len(self._allowed_roles) > 0 else None}"
-            f"{chr(10).join(map(lambda x: x.mention,self._allowed_users))}"
-            f"{chr(10) if len(self._allowed_users) > 0 else None}"
-            "Denied:\n"
-            f"{chr(10).join(map(lambda x: x.mention,self._denys))}"
         )
         embed = discord.Embed(
             color=self.COLOR,
             title=f"{self.name} Temporary Channel",
             description=description,
+        )
+        allows = list()
+        allows.extend(self._allowed_roles)
+        allows.extend(self._allowed_users)
+        logger.info(f"allow: {allows}")
+        logger.info(f"deny: {self._denys}")
+        embed.add_field(
+            inline=True,
+            name="Allowed",
+            value=(
+                f"{chr(10).join(map(lambda x: x.mention, allows)) if len(allows) > 0 else 'None'}"
+            ),
+        )
+        embed.add_field(
+            inline=True,
+            name="Denied",
+            value=f"{chr(10).join(map(lambda x: x.mention,self._denys)) if len(self._denys) > 0 else 'None'}",
         )
         return embed
 
