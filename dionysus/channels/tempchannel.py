@@ -176,7 +176,9 @@ class TempChannel:
             f"Limit: {self._limit if self._limit > 0 else 'Unlimited'}\n"
             "Allowed:\n"
             f"{chr(10).join(map(lambda x: x.mention,self._allowed_roles))}"
+            f"{chr(10) if len(self._allowed_roles) > 0 else None}"
             f"{chr(10).join(map(lambda x: x.mention,self._allowed_users))}"
+            f"{chr(10) if len(self._allowed_users) > 0 else None}"
             "Denied:\n"
             f"{chr(10).join(map(lambda x: x.mention,self._denys))}"
         )

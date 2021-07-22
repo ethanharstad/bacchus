@@ -33,17 +33,6 @@ class ChannelsCog(commands.Cog, name="Channels"):
         await ctx.send(embed=embed)
 
     @channels.command()
-    async def cleanup(self, ctx: commands.Context) -> None:
-        guild = ctx.guild
-        # logger.info(f"{type(PREFIX)} {PREFIX} {len(PREFIX)}")
-        # for channel in guild.channels:
-        #     c = str(channel.name[0])
-        #     logger.info(f"Checking {channel.name} {type(c)} {c} {len(c)}...")
-        #     if c == PREFIX:
-        #         logger.info(f"Deleting {channel.name}...")
-        #         await channel.delete()
-
-    @channels.command()
     async def create(self, ctx: commands.Context, type: str, name: str) -> None:
         category = discord.utils.get(ctx.guild.channels, name="temp-channels")
         channel = TempChannel(self.bot, name=name, voice=type.lower() == "voice")
@@ -154,6 +143,19 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
     def _is_owner(self, ctx: commands.Context, channel: TempChannel) -> bool:
         return ctx.author == channel.owner
+
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        for guild in self.bot.guilds:
+            category = discord.utils.get(guild.channels, name="temp-channels")
+            if not category:
+                continue
+            for channel in category.channels:
+                c = str(channel.name[0])
+                logger.info(f"Checking {channel.name} {type(c)} {c} {len(c)}...")
+                if c == TempChannel.PREFIX:
+                    logger.info(f"Deleting {channel.name}...")
+                    await channel.delete()
 
     @commands.Cog.listener()
     async def on_voice_state_update(
