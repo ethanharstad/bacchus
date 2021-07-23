@@ -133,6 +133,12 @@ class ChannelsCog(commands.Cog, name="Channels"):
             channel = TempChannel.by_text_channel(ctx.channel)
         channel.limit = limit
 
+    @channels.command()
+    async def invite(
+        self, ctx: commands.Context, channel: Optional[TempChannel], who: discord.User
+    ) -> None:
+        pass
+
     # @channels.command()
     # async def archive(self, ctx: commands.Context, name: Optional[str]) -> None:
     #     pass

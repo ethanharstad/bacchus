@@ -1,5 +1,6 @@
 import logging
 import typing
+from datetime import datetime, timezone
 
 import discord
 from discord.ext import commands
@@ -56,6 +57,7 @@ class TempChannel:
         self._allowed_users: typing.Set[discord.User] = set()
         self._allowed_roles: typing.Set[discord.Role] = set()
         self._denys: typing.Set[discord.User] = set()
+        self._last_activity = datetime.now(timezone.utc)
 
         TempChannel.names[self.name] = self
 
@@ -98,7 +100,18 @@ class TempChannel:
     @visible.setter
     def visible(self, state: bool):
         if state != self._visible:
+            logger.info(f"Setting {self.name} visibility to {state}...")
             self._visible = state
+            overwrites = self._generate_overwrites(clear=state)
+            if self.text_channel:
+                logger.info(f"Setting perms on {self.text_channel.name}: {overwrites}")
+                self.bot.loop.create_task(
+                    self.text_channel.edit(overwrites=overwrites)
+                )
+            if self.voice_channel:
+                self.bot.loop.create_task(
+                    self.voice_channel.edit(overwrites=overwrites)
+                )
             self.bot.loop.create_task(self._update_management_message())
 
     @property
@@ -128,9 +141,6 @@ class TempChannel:
             TempChannel.voice_channels[self.voice_channel] = self
 
         await self._update_management_message()
-
-    def restore(self):
-        pass
 
     def allow(self, target: typing.Union[discord.User, discord.Role]):
         if isinstance(target, discord.Role):
@@ -222,3 +232,22 @@ class TempChannel:
 
             if self.management_message.pinned == False:
                 await self.management_message.pin()
+
+    def _generate_overwrites(self, clear:bool=False) -> typing.Dict:
+        # TODO This probably needs to be more robust
+        # TODO rebuild perms on allow/deny changes
+        overwrites = {
+            self.guild.default_role: discord.PermissionOverwrite(
+                view_channel=clear,
+            )
+        }
+        for user in self._allowed_users:
+            member = self.guild.get_member(user.id)
+            overwrites[member] = discord.PermissionOverwrite(
+                view_channel=True,
+            )
+        for role in self._allowed_roles:
+            overwrites[role] = discord.PermissionOverwrite(
+                view_channel=True,
+            )
+        return overwrites
