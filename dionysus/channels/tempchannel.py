@@ -111,6 +111,7 @@ class TempChannel:
             raise ValueError("Limit must be greater than or equal to 0")
         if value != self._limit:
             self._limit = value
+            self.bot.loop.create_task(self.voice_channel.edit(user_limit=self._limit))
             self.bot.loop.create_task(self._update_management_message())
 
     async def setup(self, category: discord.CategoryChannel):
@@ -121,7 +122,9 @@ class TempChannel:
         self.text_channel = await category.create_text_channel(self.channel_name)
         TempChannel.text_channels[self.text_channel] = self
         if self.voice:
-            self.voice_channel = await category.create_voice_channel(self.channel_name)
+            self.voice_channel = await category.create_voice_channel(
+                self.channel_name, user_limit=self._limit
+            )
             TempChannel.voice_channels[self.voice_channel] = self
 
         await self._update_management_message()
@@ -195,8 +198,6 @@ class TempChannel:
         allows = list()
         allows.extend(self._allowed_roles)
         allows.extend(self._allowed_users)
-        logger.info(f"allow: {allows}")
-        logger.info(f"deny: {self._denys}")
         embed.add_field(
             inline=True,
             name="Allowed",
