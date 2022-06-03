@@ -41,11 +41,13 @@ class MockingCog(commands.Cog):
 
     async def _needs_help(self, message: discord.Message):
         if self.bot.user.mentioned_in(message):
+            if message.mention_everyone:
+                return
             await message.reply(f"¯\_(ツ)_/¯ perhaps you want `{self.bot.command_prefix}help`?")
 
     async def _profanity(self, message: discord.Message) -> bool:
         if profanity.contains_profanity(message.content):
-            if random.randrange(5) == 0:
+            if random.randrange(20) == 0:
                 # TODO add more responses to profanity filter
                 reply = random.choice([
                     "Dirty, dirty boy!",
@@ -60,8 +62,9 @@ class MockingCog(commands.Cog):
 
     async def _hi_dad(self, message: discord.Message) -> bool:
         if HI_DAD_PATTERN.match(message.content):
-            tokens = message.content.split(" ")
-            await message.reply(f"Hi {tokens[1]}, I'm Dad.")
+            if random.randrange(20) == 0:
+                tokens = message.content.split(" ")
+                await message.reply(f"Hi {tokens[1]}, I'm Dad.")
             return True
         return False
     
