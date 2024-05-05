@@ -16,6 +16,7 @@ from chance import ChanceCog
 from mocking import MockingCog
 from games.cah.cog import CardsAgainstHumanityCog
 from games.ridethebus.cog import RideTheBusCog
+from rp import RoleplayCog
 
 COMMAND_PREFIX = os.environ.get("COMMAND_PREFIX", "?")
 
@@ -79,6 +80,7 @@ bot.add_cog(ChanceCog(bot))
 bot.add_cog(MockingCog(bot))
 bot.add_cog(CardsAgainstHumanityCog(bot))
 bot.add_cog(RideTheBusCog(bot))
+bot.add_cog(RoleplayCog(bot))
 
 # RELEASE THE KRAKEN
 bot.run(os.environ["DISCORD_TOKEN"])
