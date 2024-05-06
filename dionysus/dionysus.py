@@ -8,6 +8,7 @@ logging.basicConfig(
 import random
 import os
 
+import asyncio
 import discord
 from discord.ext import commands
 import emoji
@@ -28,9 +29,12 @@ activity = discord.Game(
 )
 # Set discord permissions
 intents = discord.Intents(
+    dm_messages=True,
+    dm_reactions=True,
     guilds=True,
     members=True,
     messages=True,
+    message_content=True,
     reactions=True,
 )
 # Configure discord bot
@@ -76,11 +80,13 @@ async def say_error(ctx: commands.Context, error: commands.CommandError):
         await ctx.send("I couldn't resolve that channel.")
 
 
-bot.add_cog(ChanceCog(bot))
-bot.add_cog(MockingCog(bot))
-bot.add_cog(CardsAgainstHumanityCog(bot))
-bot.add_cog(RideTheBusCog(bot))
-bot.add_cog(RoleplayCog(bot))
+async def main():
+    await bot.add_cog(ChanceCog(bot))
+    await bot.add_cog(MockingCog(bot))
+    await bot.add_cog(CardsAgainstHumanityCog(bot))
+    await bot.add_cog(RideTheBusCog(bot))
+    await bot.add_cog(RoleplayCog(bot))
+    # RELEASE THE KRAKEN
+    await bot.start(os.environ["DISCORD_TOKEN"])
 
-# RELEASE THE KRAKEN
-bot.run(os.environ["DISCORD_TOKEN"])
+asyncio.run(main())
