@@ -196,11 +196,11 @@ class RoleplayCog(commands.Cog, name="Roleplay"):
         await ctx.send(embed=embed)
 
     @rp.command()
-    async def tounge(self, ctx: commands.Context, target: discord.Member) -> None:
-        logger.info("Got tounge command {target}".format(target=target))
+    async def tongue(self, ctx: commands.Context, target: discord.Member) -> None:
+        logger.info("Got tongue command {target}".format(target=target))
         embed = discord.Embed(
-            title='Sticks tounge out!',
-            description=f"{ctx.author.mention} sticks tounge out at {target.mention}!"
+            title='Sticks tongue out!',
+            description=f"{ctx.author.mention} sticks tongue out at {target.mention}!"
         )
         url = random.choice([
             'https://c.tenor.com/dyhAMzK8RIkAAAAC/tenor.gif',
